@@ -1,16 +1,14 @@
 package generador_grafo;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.Random;
 
 public class GenerarGrafo {
-	int MIN_NSECCIONES = 11;
-	int MAX_NSECCIONES = 40;
+	int MIN_NSECCIONES = 6;
+	int MAX_NSECCIONES = 10;
 	int MIN_CRUCES=1;
 	int MAX_CRUCES=3;
-	int[][] tablaGrafo;
+	static int[][] tablaGrafo;
 	int secciones;
 	private Node visitados=null;
 	static Random rand = new Random();
@@ -29,24 +27,20 @@ public class GenerarGrafo {
 	}
 	
 	private void inicializaTabla(){
-	  for(int i=0;i<secciones+1;i++){
-		  for(int j=0;j<secciones+1;j++){
+	  for(int i=0;i<secciones;i++){
+		  for(int j=0;j<secciones;j++){
 			  if(i!=0 && j!=0){
 				  tablaGrafo[i][j]=0;
-			  }else if(i==0){
-				  tablaGrafo[i][j]=j;
-			  	} else {
-			  			tablaGrafo[i][j]=i;
-			  			}
+		  }
 		  }
 	  }
 	}
 	
-	GenerarGrafo(int algoritmo){
+	GenerarGrafo(int algoritmo,boolean debug){
 		 switch(algoritmo){
 		 case 1:generarGrafo1();
 		 break;
-		 case 2:generarGrafo2();
+		 case 2:generarGrafo2(debug);
 		 break;
 		 default: generarGrafo1();
 		 break;
@@ -87,32 +81,32 @@ public class GenerarGrafo {
 			}
 		}
 	
-	private void generarGrafo2(){
+	private void generarGrafo2(boolean debug){
 		int nsecciones=0;
 		int ncruces_generados;
 		int i,j;
 		int ncruces_minActual;
 		secciones=randInt(MIN_NSECCIONES,MAX_NSECCIONES);
-		System.out.print("Secciones("+secciones+") \n");
-		tablaGrafo=new int[secciones+1][secciones+1];
+		if(debug) System.out.print("Secciones("+secciones+") \n");
+		tablaGrafo=new int[secciones][secciones];
 		inicializaTabla();
-		while(nsecciones<=secciones){
-			i=randInt(1,secciones);
+		while(nsecciones<secciones){
+			i=randInt(0,secciones-1);
 			if(visitados == null){
 				visitados=new Node(i);
 			}else if(!visitado(visitados,i)){
-			insert(visitados, i);
-			j=randInt(1,secciones);
+			insert(visitados, i,debug);
+			j=randInt(0,secciones-1);
 			ncruces_generados=0;
 			ncruces_minActual=randInt(MIN_CRUCES,MAX_CRUCES);
 				while((
 						(ncruces_generados <= ncruces_minActual) 
 						&& (ncruces_generados<=MAX_CRUCES) 
-						&& (nsecciones<=secciones)) 
+						&& (nsecciones<secciones)) 
 						|| ((ncruces_generados<=MAX_CRUCES) 
-								&& (nsecciones<=secciones))){
-					System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=MAX_CRUCES)+" (nsecciones<secciones):"+(nsecciones<secciones)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < MIN_CRUCES)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+secciones+")");
-					if(tablaGrafo[i][j] != 1 && i!=j){
+								&& (nsecciones<secciones))){
+					if(debug) System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=MAX_CRUCES)+" (nsecciones<secciones):"+(nsecciones<secciones)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < MIN_CRUCES)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+secciones+")");
+					if(i!=j){
 						tablaGrafo[i][j]=tablaGrafo[j][i]=randInt(0,1);
 						if(tablaGrafo[i][j]==1){
 						ncruces_generados++;
@@ -120,8 +114,8 @@ public class GenerarGrafo {
 						}
 					
 					}
-					j=randInt(1,secciones);
-					System.out.print(" newj("+j+")\n"); 
+					j=randInt(0,secciones-1);
+					if(debug) System.out.print(" newj("+j+")\n"); 
 				}
 			}
 		}
@@ -143,9 +137,9 @@ public class GenerarGrafo {
 	
 	void pintaTabla(){
 		System.out.println("Tabla");
-		 for(int i=0;i<=secciones;i++){
-			  for(int j=0;j<=secciones;j++){
-				if(j==1 && numlength(secciones)!=numlength(i) ){
+		 for(int i=0;i<secciones;i++){
+			  for(int j=0;j<secciones;j++){
+				if(j==0 && numlength(secciones)!=numlength(i) ){
 					for(int n=0;n<(numlength(secciones)-numlength(j));n++){
 						System.out.print(" ");
 					}
@@ -164,27 +158,53 @@ public class GenerarGrafo {
 			  System.out.print("\n");
 		  }
 	}
-	void pintaTabla2(){
-		System.out.println("Tabla");
-		 for(int i=0;i<=secciones;i++){
-			 System.out.print("[");
-			  for(int j=0;j<=secciones;j++){
-				String comaInicial=",";
-				String preComillas="";
-				String postComillas="";
+	void pintaTabla2(boolean debug){
+		if(debug)System.out.println("Tabla");
+		String preComa="";
+		
+		for(int i=0;i<secciones;i++){
+			if(debug && i==0){
+				if(numlength(secciones)>1) {System.out.print("    ");}else{System.out.print("   ");}
+				  for(int j=0;j<secciones;j++){
+					System.out.print(j);
+					if(j<secciones-1){
+					System.out.print("  ");
+					}
+				  }
+				  System.out.print("\n");				
+			}
+			 
+			  for(int j=0;j<secciones;j++){
 				if(j==0){
-					comaInicial="";
-					preComillas="\"";
-					postComillas="\"";
+					if(debug){
+					if(numlength(secciones)>1) {
+						  if(numlength(secciones)>numlength(i)){
+							for(int n=0;n<(numlength(secciones)-numlength(j));n++){
+								System.out.print(" ");
+							}
+						  }
+						}
+				  preComa=i+" [";
+				  }else{preComa="[";}
+				}else{
+				  preComa=",";
 				}
-				if(i==0){
-					preComillas="\"";
-					postComillas="\"";
+				if(j>0 && debug){
+				if(numlength(secciones)>1) {
+					  if(numlength(secciones)==numlength(j)){
+						for(int n=0;n<=(numlength(secciones)-numlength(j));n++){
+							System.out.print(" ");
+						}
+					  }
+					  System.out.print(" ");
+					}
+				
 				}
-				System.out.print(comaInicial+preComillas+tablaGrafo[i][j]+postComillas);			
+				
+				System.out.print(preComa+tablaGrafo[i][j]);			
 			  }
 			  System.out.print("]");
-			  if(i!=secciones){
+			  if(i<secciones-1){
 			  System.out.print(",\n");
 			  }else{System.out.print("\n");}
 		  }
@@ -195,7 +215,7 @@ public class GenerarGrafo {
 	}
 
 	public static void main(String[] args) {
-	
+		boolean debug = true;
 		PrintStream original = System.out;
 		/*
 		try {
@@ -208,10 +228,16 @@ public class GenerarGrafo {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}*/
-		GenerarGrafo grafo = new GenerarGrafo(2);
+		GenerarGrafo grafo = new GenerarGrafo(2,debug);
 		System.setOut(original);		
-		grafo.pintaTabla();
-		grafo.pintaTabla2();
+		//grafo.pintaTabla();
+		grafo.pintaTabla2(debug);
+		InsertaCassandra cas = new InsertaCassandra();
+		cas.prepara();
+		cas.insertDataFromAdjacentTable(tablaGrafo);
+		cas.pinta();
+		cas.close();
+		cas.cierra();
   }
    
   static class Node {
@@ -226,21 +252,19 @@ public class GenerarGrafo {
     }
   }
 
-  private void insert(Node node, int value) {
+  private void insert(Node node, int value,boolean debug) {
     if (value < node.value) {
       if (node.left != null) {
-        insert(node.left, value);
+        insert(node.left, value,debug);
       } else {
-        System.out.println("  Inserted " + value + " to left of "
-            + node.value);
+        if(debug) System.out.println("  Inserted " + value + " to left of "+ node.value);
         node.left = new Node(value);
       }
     } else if (value > node.value) {
       if (node.right != null) {
-        insert(node.right, value);
+        insert(node.right, value,debug);
       } else {
-        System.out.println("  Inserted " + value + " to right of "
-            + node.value);
+    	  if(debug) System.out.println("  Inserted " + value + " to right of "+ node.value);
         node.right = new Node(value);
       }
     }
