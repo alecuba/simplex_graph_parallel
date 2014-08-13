@@ -15,7 +15,7 @@
 @REM  limitations under the License.
 
 @echo off
-set JAVA_HOME="%CD%\..\..\..\..\..\App\Java"
+set JAVA_HOME=""%CD%\..\..\..\..\..\App\Java""
 if "%OS%" == "Windows_NT" setlocal
 
 set ARG=%1
@@ -32,8 +32,8 @@ if NOT DEFINED JAVA_HOME goto :err
 REM ***** JAVA options *****
 set JAVA_OPTS=-ea^
  -javaagent:"%CASSANDRA_HOME%\lib\jamm-0.2.5.jar"^
- -Xms1G^
- -Xmx1G^
+ -Xms256M^
+ -Xmx256M^
  -XX:+HeapDumpOnOutOfMemoryError^
  -XX:+UseParNewGC^
  -XX:+UseConcMarkSweepGC^
