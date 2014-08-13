@@ -17,7 +17,7 @@
 
 @echo off
 if "%OS%" == "Windows_NT" setlocal
-set JAVA_HOME="%CD%\..\..\..\..\..\App\Java"
+set JAVA_HOME=""%CD%\..\..\..\..\..\App\Java""
 if NOT DEFINED CASSANDRA_HOME set CASSANDRA_HOME=%~dp0..
 if NOT DEFINED JAVA_HOME goto :err
 
