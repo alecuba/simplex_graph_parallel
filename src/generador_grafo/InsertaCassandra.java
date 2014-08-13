@@ -1,5 +1,7 @@
 package generador_grafo;
 
+import java.util.Random;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
@@ -8,9 +10,10 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
-public class insertaCassandra {
+public class InsertaCassandra {
    private Cluster cluster;
    private Session session;
+   static Random rand = new Random();
    public void connect(String node) {
 	  cluster = Cluster.builder()
             .addContactPoint(node)
@@ -42,8 +45,8 @@ public class insertaCassandra {
 	   session.execute(
 			      "CREATE TABLE BDCaminos.nodos (" +
 			            "id uuid PRIMARY KEY," + 
-			            "extremoA uuid," + 
-			            "extremoB uuid," + 
+			            "extremoA int," + 
+			            "extremoB int," + 
 			            "consumoMax int," + 
 			            "coste float," + 
 			            ");");
@@ -56,8 +59,8 @@ public class insertaCassandra {
 			      "INSERT INTO BDCaminos.nodos (id, extremoA, extremoB, consumoMax, coste) " +
 			      "VALUES (" +
 			          "blobAsUuid(timeuuidAsBlob(now()))," +
-			          "00000000-0000-0000-0000-000000000000," +
-			          "00000000-0000-0000-0000-000000000001," +
+			          "0," +
+			          "1," +
 			          "2000," +
 			          "0.2)" +
 			          ";");
@@ -65,18 +68,54 @@ public class insertaCassandra {
 			      "INSERT INTO BDCaminos.nodos (id, extremoA, extremoB, consumoMax, coste) " +
 			      "VALUES (" +
 			          "blobAsUuid(timeuuidAsBlob(now()))," +
-			          "00000000-0000-0000-0000-000000000001," +
-			          "00000000-0000-0000-0000-000000000000," +
+			          "1," +
+			          "0," +
 			          "2500," +
 			          "0.5)" +
 			          ";");
    }
    
+   public void insertDataFromAdjacentTable(int[][] adjacentTable){
+	   int i,j;
+	   for(i=0;i<adjacentTable.length;i++){
+		   for(j=i+1;j<adjacentTable.length;j++){
+			   session.execute(
+					      "INSERT INTO BDCaminos.nodos (id, extremoA, extremoB, consumoMax, coste) " +
+				"VALUES (" +"blobAsUuid(timeuuidAsBlob(now()))," +j+ "," +i+"," +randInt(1000,20000)+ "," +randfloat((float)0.1,(float)1.5)+");");
+		   }
+	   }
+   }
+   
+   private static int randInt(int min, int max) {
+
+	    // NOTE: Usually this should be a field rather than a method
+	    // variable so that it is not re-seeded every call.
+	    
+
+	    // nextInt is normally exclusive of the top value,
+	    // so add 1 to make it inclusive
+	    int randomNum = rand.nextInt((max - min) + 1) + min;
+
+	    return randomNum;
+	}
+   
+   private static float randfloat(float min, float max) {
+
+	    // NOTE: Usually this should be a field rather than a method
+	    // variable so that it is not re-seeded every call.
+	    
+
+	    // nextInt is normally exclusive of the top value,
+	    // so add 1 to make it inclusive
+	     float randomNum=((max - min) * rand.nextFloat()) + min;
+	    return randomNum;
+	}
+   
    public void querySchema(){
 	//   ResultSet results = session.execute("SELECT * FROM BDCaminos.nodos " +
 		//        "WHERE ( extremoA = 00000000-0000-0000-0000-000000000000 ) OR ( extremoB = 00000000-0000-0000-0000-000000000000 );");
-	   ResultSet resultsA = session.execute("SELECT * FROM BDCaminos.nodos WHERE extremoA = 00000000-0000-0000-0000-000000000000;");
-	   ResultSet resultsB = session.execute("SELECT * FROM BDCaminos.nodos WHERE extremoB = 00000000-0000-0000-0000-000000000000;");
+	   ResultSet resultsA = session.execute("SELECT * FROM BDCaminos.nodos WHERE extremoA = 1;");
+	   ResultSet resultsB = session.execute("SELECT * FROM BDCaminos.nodos WHERE extremoB = 1;");
 	   System.out.println(String.format("%-37s%-37s%-37s%-10s %-5s",
 "id", "extremoA", "extremoB","consumoMax","coste"));
 	   
@@ -96,8 +135,33 @@ public class insertaCassandra {
 		}
 		System.out.println();
    }
+   
+   public void prepara(){
+	   connect("127.0.0.1");
+	   createSchema();	   
+   }
+   
+   public void pinta(){
+	   ResultSet results = session.execute("SELECT * FROM BDCaminos.nodos");
+	   System.out.println(String.format("%-37s%-37s%-37s%-10s %-5s",
+"id", "extremoA", "extremoB","consumoMax","coste"));
+	   
+		for (Row row : results) {
+			System.out.println(String.format("%s",
+				       "------------------------------------+------------------------------------+------------------------------------+----------+-----"));
+				
+		    System.out.println(String.format("%-37s%-37s%-37s%-10d %-3.1f", row.getUUID("id"),
+		    	row.getInt("extremoA"),  row.getInt("extremoB"),row.getInt("consumoMax"),  row.getFloat("coste")));
+		}
+		System.out.println();
+   }
+   
+   public void cierra(){
+	   close();
+   }
+   
    public static void main(String[] args) {
-	  insertaCassandra client = new insertaCassandra();
+	  InsertaCassandra client = new InsertaCassandra();
 	  client.connect("127.0.0.1");
 	  client.createSchema();
 	  client.loadData();
