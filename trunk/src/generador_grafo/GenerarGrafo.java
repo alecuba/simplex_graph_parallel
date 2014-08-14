@@ -4,16 +4,17 @@ import java.io.PrintStream;
 import java.util.Random;
 
 public class GenerarGrafo {
-	int MIN_NSECCIONES = 6;
-	int MAX_NSECCIONES = 10;
-	int MIN_CRUCES=1;
-	int MAX_CRUCES=3;
-	static int[][] tablaGrafo;
-	int secciones;
-	private Node visitados=null;
-	static Random rand = new Random();
+	private int minSecciones = 6;
+	private int maxSecciones = 10;
+	private int minCruces=1;
+	private int maxCruces=3;
+	private int[][] tablaGrafo;
+	private int seccionesActual;
+	private Node verticesVisitados=null;
+	private Random rand = new Random();
+    private boolean debug=false;
 	
-	private static int randInt(int min, int max) {
+	private int randInt(int min, int max) {
 
 	    // NOTE: Usually this should be a field rather than a method
 	    // variable so that it is not re-seeded every call.
@@ -27,8 +28,8 @@ public class GenerarGrafo {
 	}
 	
 	private void inicializaTabla(){
-	  for(int i=0;i<secciones;i++){
-		  for(int j=0;j<secciones;j++){
+	  for(int i=0;i<seccionesActual;i++){
+		  for(int j=0;j<seccionesActual;j++){
 			  if(i!=0 && j!=0){
 				  tablaGrafo[i][j]=0;
 		  }
@@ -36,35 +37,52 @@ public class GenerarGrafo {
 	  }
 	}
 	
-	GenerarGrafo(int algoritmo,boolean debug){
-		 switch(algoritmo){
-		 case 1:generarGrafo1();
-		 break;
-		 case 2:generarGrafo2(debug);
-		 break;
-		 default: generarGrafo1();
-		 break;
-		 }
+	GenerarGrafo(){
 		}
 	
-	private void generarGrafo1(){
+	public void setAlgoritmo(int algoritmo){
+		if(algoritmo<=2 || algoritmo>=1){
+			this.algoritmo=algoritmo;
+		}
+		
+	}
+	
+	public void setDebug(boolean debug){
+		this.debug=debug;	
+	}
+	
+	public void generar(){
+		switch(algoritmo){
+		 case 1:algoritmoGeneraGrafo1();
+		 break;
+		 case 2:algoritmoGeneraGrafo2();
+		 break;
+		 default: algoritmoGeneraGrafo1();
+		 break;
+		 }
+		preparaEntradaGrafo();
+	}
+	
+	private int algoritmo=2;
+	
+	private void algoritmoGeneraGrafo1(){
 		int nsecciones=0;
 		int ncruces_generados;
 		int j;
 		int ncruces_minActual;
-		secciones=randInt(MIN_NSECCIONES,MAX_NSECCIONES);
-		System.out.print("Secciones("+secciones+") \n");
+		seccionesActual=randInt(minSecciones,maxSecciones);
+		if(debug)System.out.print("Secciones("+seccionesActual+") \n");
 		
-		tablaGrafo=new int[secciones+1][secciones+1];
+		tablaGrafo=new int[seccionesActual+1][seccionesActual+1];
 		inicializaTabla();
-		for(int i=1;i<secciones;i++){
+		for(int i=1;i<seccionesActual;i++){
 			ncruces_generados=0;
 			j=i+1;
-			ncruces_minActual=randInt(MIN_CRUCES,MAX_CRUCES);
-				while(((ncruces_generados < ncruces_minActual) && (ncruces_generados<=MAX_CRUCES) && (nsecciones<secciones)) || ((ncruces_generados<=MAX_CRUCES) && (nsecciones<secciones))){
+			ncruces_minActual=randInt(minCruces,maxCruces);
+				while(((ncruces_generados < ncruces_minActual) && (ncruces_generados<=maxCruces) && (nsecciones<seccionesActual)) || ((ncruces_generados<=maxCruces) && (nsecciones<seccionesActual))){
 					
-					System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=MAX_CRUCES)+" (nsecciones<secciones):"+(nsecciones<secciones)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < MIN_CRUCES)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+secciones+")");
-					if(j>secciones){j=1;}else{
+					if(debug)System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=maxCruces)+" (nsecciones<secciones):"+(nsecciones<seccionesActual)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < minCruces)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+seccionesActual+")");
+					if(j>seccionesActual){j=1;}else{
 					if(tablaGrafo[i][j] != 1 && i!=j){
 						tablaGrafo[i][j]=tablaGrafo[j][i]=randInt(0,1);
 						if(tablaGrafo[i][j]==1){
@@ -75,37 +93,37 @@ public class GenerarGrafo {
 					
 					j++;
 					}
-					System.out.print(" newj("+j+")\n"); 
+					if(debug)System.out.print(" newj("+j+")\n"); 
 					
 				}				
 			}
 		}
 	
-	private void generarGrafo2(boolean debug){
+	private void algoritmoGeneraGrafo2(){
 		int nsecciones=0;
 		int ncruces_generados;
 		int i,j;
 		int ncruces_minActual;
-		secciones=randInt(MIN_NSECCIONES,MAX_NSECCIONES);
-		if(debug) System.out.print("Secciones("+secciones+") \n");
-		tablaGrafo=new int[secciones][secciones];
+		seccionesActual=randInt(minSecciones,maxSecciones);
+		if(debug) System.out.print("Secciones("+seccionesActual+") \n");
+		tablaGrafo=new int[seccionesActual][seccionesActual];
 		inicializaTabla();
-		while(nsecciones<secciones){
-			i=randInt(0,secciones-1);
-			if(visitados == null){
-				visitados=new Node(i);
-			}else if(!visitado(visitados,i)){
-			insert(visitados, i,debug);
-			j=randInt(0,secciones-1);
+		while(nsecciones<seccionesActual){
+			i=randInt(0,seccionesActual-1);
+			if(verticesVisitados == null){
+				verticesVisitados=new Node(i);
+			}else if(!visitado(verticesVisitados,i)){
+			insert(verticesVisitados, i,debug);
+			j=randInt(0,seccionesActual-1);
 			ncruces_generados=0;
-			ncruces_minActual=randInt(MIN_CRUCES,MAX_CRUCES);
+			ncruces_minActual=randInt(minCruces,maxCruces);
 				while((
 						(ncruces_generados <= ncruces_minActual) 
-						&& (ncruces_generados<=MAX_CRUCES) 
-						&& (nsecciones<secciones)) 
-						|| ((ncruces_generados<=MAX_CRUCES) 
-								&& (nsecciones<secciones))){
-					if(debug) System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=MAX_CRUCES)+" (nsecciones<secciones):"+(nsecciones<secciones)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < MIN_CRUCES)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+secciones+")");
+						&& (ncruces_generados<=maxCruces) 
+						&& (nsecciones<seccionesActual)) 
+						|| ((ncruces_generados<=maxCruces) 
+								&& (nsecciones<seccionesActual))){
+					if(debug) System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=maxCruces)+" (nsecciones<secciones):"+(nsecciones<seccionesActual)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < minCruces)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+seccionesActual+")");
 					if(i!=j){
 						tablaGrafo[i][j]=tablaGrafo[j][i]=randInt(0,1);
 						if(tablaGrafo[i][j]==1){
@@ -114,7 +132,7 @@ public class GenerarGrafo {
 						}
 					
 					}
-					j=randInt(0,secciones-1);
+					j=randInt(0,seccionesActual-1);
 					if(debug) System.out.print(" newj("+j+")\n"); 
 				}
 			}
@@ -122,7 +140,7 @@ public class GenerarGrafo {
 	}
 	
 	
-	private int numlength(int n)
+	private int logitudNumero(int n)
 	{
 		int l;
 		if(n>0){
@@ -136,50 +154,50 @@ public class GenerarGrafo {
 	}
 	
 	void pintaTabla(){
-		System.out.println("Tabla");
-		 for(int i=0;i<secciones;i++){
-			  for(int j=0;j<secciones;j++){
-				if(j==0 && numlength(secciones)!=numlength(i) ){
-					for(int n=0;n<(numlength(secciones)-numlength(j));n++){
-						System.out.print(" ");
+		if(debug)System.out.println("Tabla");
+		 for(int i=0;i<seccionesActual;i++){
+			  for(int j=0;j<seccionesActual;j++){
+				if(j==0 && logitudNumero(seccionesActual)!=logitudNumero(i) ){
+					for(int n=0;n<(logitudNumero(seccionesActual)-logitudNumero(j));n++){
+						if(debug)System.out.print(" ");
 					}
 				}
 				//System.out.println("j("+j+") numlength("+numlength(j)+")");
-				  System.out.print(tablaGrafo[i][j]);
-				if(i!=0 && numlength(secciones)>1) {
-				  if(numlength(secciones)==numlength(j)){
-					for(int n=0;n<=(numlength(secciones)-numlength(j));n++){
-						System.out.print(" ");
+				if(debug)System.out.print(tablaGrafo[i][j]);
+				if(i!=0 && logitudNumero(seccionesActual)>1) {
+				  if(logitudNumero(seccionesActual)==logitudNumero(j)){
+					for(int n=0;n<=(logitudNumero(seccionesActual)-logitudNumero(j));n++){
+						if(debug)System.out.print(" ");
 					}
 				  }
 				}
-				System.out.print(" ");
+				if(debug)System.out.print(" ");
 			  }
-			  System.out.print("\n");
+			  if(debug)System.out.print("\n");
 		  }
 	}
-	void pintaTabla2(boolean debug){
-		if(debug)System.out.println("Tabla");
+	void pintaTabla2(){
+		if(debug)System.out.println("\nTabla");
 		String preComa="";
 		
-		for(int i=0;i<secciones;i++){
+		for(int i=0;i<seccionesActual;i++){
 			if(debug && i==0){
-				if(numlength(secciones)>1) {System.out.print("    ");}else{System.out.print("   ");}
-				  for(int j=0;j<secciones;j++){
+				if(logitudNumero(seccionesActual)>1) {System.out.print("    ");}else{System.out.print("   ");}
+				  for(int j=0;j<seccionesActual;j++){
 					System.out.print(j);
-					if(j<secciones-1){
+					if(j<seccionesActual-1){
 					System.out.print("  ");
 					}
 				  }
 				  System.out.print("\n");				
 			}
 			 
-			  for(int j=0;j<secciones;j++){
+			  for(int j=0;j<seccionesActual;j++){
 				if(j==0){
 					if(debug){
-					if(numlength(secciones)>1) {
-						  if(numlength(secciones)>numlength(i)){
-							for(int n=0;n<(numlength(secciones)-numlength(j));n++){
+					if(logitudNumero(seccionesActual)>1) {
+						  if(logitudNumero(seccionesActual)>logitudNumero(i)){
+							for(int n=0;n<(logitudNumero(seccionesActual)-logitudNumero(j));n++){
 								System.out.print(" ");
 							}
 						  }
@@ -190,9 +208,9 @@ public class GenerarGrafo {
 				  preComa=",";
 				}
 				if(j>0 && debug){
-				if(numlength(secciones)>1) {
-					  if(numlength(secciones)==numlength(j)){
-						for(int n=0;n<=(numlength(secciones)-numlength(j));n++){
+				if(logitudNumero(seccionesActual)>1) {
+					  if(logitudNumero(seccionesActual)==logitudNumero(j)){
+						for(int n=0;n<=(logitudNumero(seccionesActual)-logitudNumero(j));n++){
 							System.out.print(" ");
 						}
 					  }
@@ -204,16 +222,40 @@ public class GenerarGrafo {
 				System.out.print(preComa+tablaGrafo[i][j]);			
 			  }
 			  System.out.print("]");
-			  if(i<secciones-1){
+			  if(i<seccionesActual-1){
 			  System.out.print(",\n");
 			  }else{System.out.print("\n");}
 		  }
+		System.out.print("\n");
 	}
 	
 	public Node getVisitados(){
-		return this.visitados;
+		return this.verticesVisitados;
+	}
+	
+	public void preparaEntradaGrafo(){
+		boolean entrada=false;
+		int j=0;
+		while(j<seccionesActual && !entrada){
+		  if(tablaGrafo[0][j]==1){
+			  entrada=true;
+			}
+			j++;
+		}
+		if(!entrada){
+		  j=randInt(0,seccionesActual-1);
+		  if(debug){System.out.print("No habia entrada, se ha creado una en [0]["+j+"]\n");}
+		  tablaGrafo[0][j]=1;
+		  tablaGrafo[j][0]=1;
+		}
+		
 	}
 
+	public int[][] getTablaGrafo(){
+		return tablaGrafo;
+		
+	}
+	
 	public static void main(String[] args) {
 		boolean debug = true;
 		PrintStream original = System.out;
@@ -228,16 +270,11 @@ public class GenerarGrafo {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}*/
-		GenerarGrafo grafo = new GenerarGrafo(2,debug);
+		GenerarGrafo grafo = new GenerarGrafo();
 		System.setOut(original);		
 		//grafo.pintaTabla();
-		grafo.pintaTabla2(debug);
-		InsertaCassandra cas = new InsertaCassandra();
-		cas.prepara();
-		cas.insertDataFromAdjacentTable(tablaGrafo);
-		cas.pinta();
-		cas.close();
-		cas.cierra();
+		grafo.pintaTabla2();
+		
   }
    
   static class Node {
