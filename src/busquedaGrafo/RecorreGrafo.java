@@ -7,6 +7,8 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
@@ -48,12 +50,29 @@ public class RecorreGrafo {
 	
 	public void consultaExtremoGrafoSQL(int extremo){
 		  conecta();
+		  if(debug)System.out.printf("consultaExtremo\n");
 	      try{
-	    	  session.execute("USE BD");
-	    	  session.execute("SELECT * FROM nodos WHERE extremoA=0 UNION ALL SELECT * FROM nodos WHERE extremoB=0 ");	 
+	    	  session.execute("USE Bd");
 	      }catch (InvalidQueryException e){
-	    	
+	    	  if(debug)System.out.printf("errorbd\n");
 	      }
+	      try{
+	      ResultSet results = session.execute("SELECT * FROM extremosNodos WHERE extremo = 0");
+          System.out.println(String.format("%-80s%-30s%-14s",
+          		"id","idseccion", "extremo"));
+   		for (Row row : results) {
+   			System.out.println(String.format("%s",
+   				       "-----------------------------------------------------------+----------------------+---------------"));
+   				
+   		   System.out.println(String.format("%-46.46s%-30s%-20s", row.getUUID("id"),row.getString("idseccion"),
+   		    	row.getInt("extremo")));
+   		}
+		System.out.println();
+	      }catch (InvalidQueryException e){
+	    	  if(debug)System.out.printf("errorconsulta\n");
+	      }
+	      
+	      
 		desconecta();
 	}
 	
