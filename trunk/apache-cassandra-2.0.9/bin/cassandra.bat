@@ -15,6 +15,7 @@
 @REM  limitations under the License.
 
 @echo off
+TITLE Cassandra
 set JAVA_HOME=""%CD%\..\..\..\..\..\App\Java""
 if "%OS%" == "Windows_NT" setlocal
 
