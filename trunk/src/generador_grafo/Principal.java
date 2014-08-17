@@ -127,7 +127,6 @@ public class Principal {
 			    path = path.substring(0, path.length());
 			    String dir = path.substring(0, path.length()-13);
 				Runtime.getRuntime().exec("cmd /c cd "+dir+" && start "+path);
-				btnInsertarseccionesBD.setEnabled(true);
 				try {
 					Thread.sleep(10000);
 				} catch (InterruptedException e1) {
@@ -341,7 +340,7 @@ public class Principal {
 					    String dir = path.substring(0, path.length()-13);
 						Runtime.getRuntime().exec("cmd /c cd "+dir+" && start "+path);
 						try {
-							Thread.sleep(10000);
+							Thread.sleep(5000);
 						} catch (InterruptedException e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
@@ -356,10 +355,12 @@ public class Principal {
 				 grafo = new GenerarGrafo();
 				 grafo.setDebug(debug);
 				 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()));
+				 grafo.pintaTabla();
 				 grafo.insertaGrafoCQL();
 				 grafo.pintaBD();
 				 clientes = new GenerarClientes();
 				 clientes.setDebug(debug);
+				 clientes.conectarClientes(grafo.numeroSecciones());
 				 clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
 				 clientes.insertaGrafoCQL(); 
 				 clientes.pintaBD();
@@ -406,8 +407,8 @@ public class Principal {
 	      }
 	      Session session = cluster.connect();
 		   try{
-		     session.execute("USE BD"); 
-		     session.execute("DROP KEYSPACE BD;");
+		     session.execute("USE Bd"); 
+		     session.execute("DROP KEYSPACE Bd;");
 		   } catch (InvalidQueryException e){ 
 		   }
 	}
