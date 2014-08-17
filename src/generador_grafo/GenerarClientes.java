@@ -17,7 +17,7 @@ public class GenerarClientes {
 	private int maxClientes = 10;
 	private int minConsumo=1;
 	private int maxConsumo=3;
-	private int[] arrayClientes;
+	private int[][] arrayClientes;
 	private Random rand = new Random();
     private boolean debug=false;
 	
@@ -45,15 +45,20 @@ public class GenerarClientes {
 			this.maxConsumo=maxConsumo;
 		}
 		algoritmoGenera();
-		preparaEntradaGrafo();
 	}
 	
 	private void algoritmoGenera(){
 		int clientesActual=randInt(minClientes,maxClientes);
-		arrayClientes = new int[clientesActual];
+		arrayClientes = new int[clientesActual][2];
 		for(int i=0;i<clientesActual;i++){
-			arrayClientes[i]=randInt(minConsumo,maxConsumo);
+			arrayClientes[i][0]=randInt(minConsumo,maxConsumo);
 		}		
+	}
+	
+	public void conectarClientes(int numSecciones){
+		for (int i=0;i<arrayClientes.length;i++){
+			arrayClientes[i][1]=randInt(0,numSecciones);
+		}
 	}
 	
 	
@@ -116,12 +121,7 @@ public class GenerarClientes {
 			  }
 		System.out.print("\n");
 	}
-	
-	
-	
-	public void preparaEntradaGrafo(){
-				
-	}
+
 
 	public void insertaGrafoCQL(){
 		conecta();

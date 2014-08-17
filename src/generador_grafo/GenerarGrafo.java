@@ -17,6 +17,8 @@ public class GenerarGrafo {
 	private int maxSecciones = 10;
 	private int minCruces=1;
 	private int maxCruces=3;
+	private int minEntradas=1;
+	private int maxEntradas=2;
 	private int[][] tablaGrafo;
 	private static Random rand = new Random();
     private boolean debug=false;
@@ -44,9 +46,8 @@ public class GenerarGrafo {
 		}else{
 			this.maxCruces=maxCruces;
 		}
-		
 		algoritmoGenera();
-		preparaEntradaGrafo();
+		//preparaEntradaGrafo();
 	}
 	
 	private void algoritmoGenera(){
@@ -55,6 +56,7 @@ public class GenerarGrafo {
 		int ncruces_generados;
 		int i,j;
 		int ncruces_minActual;
+		int ncruces_maxActual;
 		int seccionesActual=randInt(minSecciones,maxSecciones);
 		if(debug) System.out.print("Secciones("+seccionesActual+") \n");
 		tablaGrafo=new int[seccionesActual][seccionesActual];
@@ -64,14 +66,13 @@ public class GenerarGrafo {
 			verticesVisitados.insertar(i);
 			j=randInt(0,seccionesActual-1);
 			ncruces_generados=0;
-			ncruces_minActual=randInt(minCruces,maxCruces);
-				while((
-						(ncruces_generados <= ncruces_minActual) 
-						&& (ncruces_generados<=maxCruces) 
-						&& (nsecciones<seccionesActual)) 
-						|| ((ncruces_generados<=maxCruces) 
-								&& (nsecciones<seccionesActual))){
-					if(debug) System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=maxCruces)+" (nsecciones<secciones):"+(nsecciones<seccionesActual)+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < minCruces)+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+seccionesActual+")");
+			if(i==0){ncruces_maxActual = maxEntradas;ncruces_minActual=minEntradas;}else{ncruces_minActual=randInt(minCruces,maxCruces);}
+			while((ncruces_generados <= ncruces_minActual) && (ncruces_generados<=maxCruces) && (nsecciones<seccionesActual)){
+					if(debug) System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=maxCruces)
+												+" (nsecciones<secciones):"+(nsecciones<seccionesActual)
+												+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < minCruces)
+												+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("
+												+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+seccionesActual+")");
 					if(i!=j){
 						tablaGrafo[i][j]=tablaGrafo[j][i]=randInt(0,1);
 						if(tablaGrafo[i][j]==1){
@@ -84,6 +85,8 @@ public class GenerarGrafo {
 					if(debug) System.out.print(" newj("+j+")\n"); 
 				}
 			}
+			
+			
 		}
 	}
 	
@@ -160,14 +163,16 @@ public class GenerarGrafo {
 		boolean entrada=false;
 		int j=0;
 		int seccionesActual=tablaGrafo.length;
+		 if(debug){System.out.print("tablaGrafo.length:"+tablaGrafo.length+"\n");}
 		while(j<seccionesActual && !entrada){
 		  if(tablaGrafo[0][j]==1){
 			  entrada=true;
+			  if(debug){System.out.print("Encontrado entrada en[0]["+j+"]\n");}
 			}
 			j++;
 		}
 		if(!entrada){
-		  j=randInt(0,seccionesActual-1);
+		  j=randInt(1,seccionesActual-1);
 		  if(debug){System.out.print("No habia entrada, se ha creado una en [0]["+j+"]\n");}
 		  tablaGrafo[0][j]=1;
 		  tablaGrafo[j][0]=1;
@@ -195,19 +200,32 @@ public class GenerarGrafo {
 		  session.execute("CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
 	      session.execute("USE Bd");
 	      try{
-	    	  session.execute("SELECT id FROM nodos LIMIT 1");	    	  
+	    	  session.execute("SELECT id FROM extremosNodos LIMIT 1");	    	  
 	      }catch (InvalidQueryException e){
-	    	  session.execute("CREATE TABLE nodos (id uuid PRIMARY KEY, extremoA int, extremoB int, consumoMax int, coste float)");
-			  session.execute("CREATE INDEX extremoA_IDX ON nodos (extremoA)");
-			  session.execute("CREATE INDEX extremoB_IDX ON nodos (extremoB)");	    	  
+	    	  session.execute("CREATE TABLE extremosNodos (id uuid PRIMARY KEY,idseccion text, extremo int)");
+	    	  session.execute("CREATE TABLE caracteristicasNodos (idseccion text PRIMARY KEY, consumoMax int, coste float)");
+			  session.execute("CREATE INDEX extremo_IDX ON extremosNodos (extremo)");    	  
 	      }
 	    	  
-		   PreparedStatement ps = session.prepare("INSERT INTO nodos (id, extremoA, extremoB, consumoMax, coste) VALUES (?, ?, ?, ?, ?)");
+		   PreparedStatement psExtremos = session.prepare("INSERT INTO extremosNodos (id,idseccion, extremo) VALUES (?, ?, ?)");
+		   PreparedStatement psCaracteristicas = session.prepare("INSERT INTO caracteristicasNodos (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
 		   BatchStatement batch = new BatchStatement();
-		   int i,j;
+		   int i,j,consumoMax;
+		   float coste;
+		   String idseccion;
 		   for(i=0;i<tablaGrafo.length;i++){
 			   for(j=i+1;j<tablaGrafo.length;j++){
-			batch.add(ps.bind(UUID.randomUUID(),j, i,randInt(1000,20000),randfloat((float)0.1,(float)1.5)));
+				   if(tablaGrafo[i][j]==1){
+				   if(debug)System.out.printf("Estoy en tabla[%d][%d]\n",i,j);
+				  consumoMax=randInt(1000,20000);
+				  coste=randfloat((float)0.1,(float)1.5);
+				  idseccion=String.valueOf(i)+"_"+String.valueOf(j);
+				  batch.add(psExtremos.bind(UUID.randomUUID(),idseccion,i));
+				  batch.add(psExtremos.bind(UUID.randomUUID(),idseccion,j));				  
+				  batch.add(psCaracteristicas.bind(idseccion,consumoMax,coste));
+				  //batch.add(ps.bind(UUID.randomUUID(),j, i,consumoMax,coste));
+			//batch.add(ps.bind(UUID.randomUUID(),j, i,randInt(1000,20000),randfloat((float)0.1,(float)1.5)));
+				   }
 			}
 		   }
 			session.execute(batch);
@@ -223,25 +241,39 @@ public class GenerarGrafo {
 		    return randomNum;
 	}
 	
+	public int numeroSecciones(){
+		return tablaGrafo.length;
+		
+	}
+	
 	public void pintaBD(){
 		boolean vacia=false;
 		conecta();
 	      try{
-			     session.execute("USE BD");      
+			     session.execute("USE Bd");      
 	      }catch (InvalidQueryException e){
 	    	  vacia=true;
 	    	  System.out.println("Vacia o no existe BD\n");
 	      }
 	      if(!vacia){
-	    	  ResultSet results = session.execute("SELECT * FROM nodos");
-	          System.out.println(String.format("%-80s%-14s%-12s%-12s%-5s",
-	          		"id", "extremoA", "extremoB","consumoMax","coste"));
+	    	  ResultSet results = session.execute("SELECT * FROM extremosNodos");
+	          System.out.println(String.format("%-80s%-14s",
+	          		"id", "extremo"));
 	   		for (Row row : results) {
 	   			System.out.println(String.format("%s",
-	   				       "-----------------------------------------------------------+---------------+--------------+-------------------+-----------"));
+	   				       "-----------------------------------------------------------+---------------"));
 	   				
-	   		   System.out.println(String.format("%-46.46s%-20s%-20s%-20d%-3.1f", row.getUUID("id"),
-	   		    	row.getInt("extremoA"),  row.getInt("extremoB"),row.getInt("consumoMax"),  row.getFloat("coste")));
+	   		   System.out.println(String.format("%-46.46s%-20s", row.getUUID("id"),
+	   		    	row.getInt("extremo")));
+	   		}
+			System.out.println();
+			results = session.execute("SELECT * FROM caracteristicasNodos");
+	          System.out.println(String.format("%-80s%-14s%-5s",
+	          		"id", "consumoMax","coste"));
+	   		for (Row row : results) {
+	   			System.out.println(String.format("%s",
+	   				       "-----------------------------------------------------------+---------------+-----------"));
+	   		   System.out.println(String.format("%-46.46s%-20s%-3.1f", row.getString("idseccion"),row.getInt("consumoMax"),  row.getFloat("coste")));
 	   		}
 			System.out.println();
 	      }
