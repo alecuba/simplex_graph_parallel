@@ -11,9 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-
+import java.util.concurrent.RejectedExecutionException;
 import javax.swing.AbstractButton;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
@@ -21,11 +19,8 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
-
 import java.awt.BorderLayout;
-
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -33,21 +28,20 @@ import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.text.DefaultCaret;
-
 import busquedaGrafo.RecorreGrafo;
-
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 
 public class Principal {
 
 	private JFrame frame;
 	private GenerarClientes clientes;
-	private JButton btnInsertarseccionesBD;
 	private boolean debug=true;
+	private boolean autoinserta=false;
 	private JTextField txtMinsecciones;
 	private JTextField txtMaxsecciones;
 	private JTextField txtMaxcruces;
@@ -120,25 +114,7 @@ public class Principal {
 		
 		mntmArrancaCassandra.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(!compruebaCassandra()){
-			    try {
-			    File currDir = new File(".\\apache-cassandra-2.0.9\\bin\\cassandra.bat");
-			    String path = currDir.getAbsolutePath();
-			    path = path.substring(0, path.length());
-			    String dir = path.substring(0, path.length()-13);
-				Runtime.getRuntime().exec("cmd /c cd "+dir+" && start "+path);
-				try {
-					Thread.sleep(10000);
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
+				enciendeProcesoCassandra();
 			}
 		});
 		
@@ -147,7 +123,7 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				grafo.setDebug(debug);
 				grafo.pintaTabla();
-				if(compruebaCassandra()){
+				if(autoinserta&&esperaConexionCassandra()){
 				grafo.pintaBD();
 				}
 			}
@@ -159,7 +135,7 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				clientes.setDebug(debug);
 				clientes.pintaTabla();
-				if(compruebaCassandra()){
+				if(autoinserta&&esperaConexionCassandra()){
 				clientes.pintaBD();
 				}
 			}
@@ -187,6 +163,15 @@ public class Principal {
 			}
 		});
 		
+		JCheckBoxMenuItem chckbxmntmAutoInserta = new JCheckBoxMenuItem("Auto inserta");
+		chckbxmntmAutoInserta.setSelected(false);
+		mnOpciones.add(chckbxmntmAutoInserta);
+		chckbxmntmAutoInserta.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {		        
+				Principal.this.setAutoInserta(((AbstractButton) e.getSource()).getModel().isSelected());
+			}
+		});
+		
 		JPanel panel = new JPanel();
 		frame.getContentPane().add(panel, BorderLayout.WEST);
 		
@@ -204,7 +189,7 @@ public class Principal {
 		
 		txtMinsecciones = new JTextField();
 		horizontalBox.add(txtMinsecciones);
-		txtMinsecciones.setText("6");
+		txtMinsecciones.setText("10");
 		txtMinsecciones.setColumns(10);
 		
 		Box horizontalBox_1 = Box.createHorizontalBox();
@@ -215,7 +200,7 @@ public class Principal {
 		
 		txtMaxsecciones = new JTextField();
 		horizontalBox_1.add(txtMaxsecciones);
-		txtMaxsecciones.setText("10");
+		txtMaxsecciones.setText("15");
 		txtMaxsecciones.setColumns(10);
 		
 		Box horizontalBox_2 = Box.createHorizontalBox();
@@ -225,7 +210,7 @@ public class Principal {
 		horizontalBox_2.add(lblMinCruces);
 		
 		txtMincruces = new JTextField();
-		txtMincruces.setText("1");
+		txtMincruces.setText("3");
 		txtMincruces.setColumns(10);
 		horizontalBox_2.add(txtMincruces);
 		
@@ -237,7 +222,7 @@ public class Principal {
 		
 		txtMaxcruces = new JTextField();
 		horizontalBox_3.add(txtMaxcruces);
-		txtMaxcruces.setText("3");
+		txtMaxcruces.setText("4");
 		txtMaxcruces.setColumns(10);
 		
 		Box verticalBox_1 = Box.createVerticalBox();
@@ -295,75 +280,63 @@ public class Principal {
 		
 		JButton btnGenerarsecciones = new JButton("Generar Secciones");
 		verticalBox_2.add(btnGenerarsecciones);
+		btnGenerarsecciones.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				 Thread haztodoThread = new Thread() {
+				      public void run() {
+				 grafo = new GenerarGrafo(Principal.this);
+				 grafo.setDebug(debug);
+				 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2);
+				 if(debug)grafo.pintaTabla();
+				 if(autoinserta&&esperaConexionCassandra()){
+				 grafo.insertaGrafoCQL();
+				 }
+				      }
+				    };
+				    haztodoThread.start();
+			}
+		});
 		
 		JButton btnGenerarClientes = new JButton("Generar Clientes");
 		verticalBox_2.add(btnGenerarClientes);
-		btnGenerarsecciones.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {		        
-				 grafo = new GenerarGrafo();
-				 grafo.setDebug(debug);
-				 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()));
-				 if(compruebaCassandra()){
-				 grafo.insertaGrafoCQL();
-				 }
-			}
-		});
 		btnGenerarClientes.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {		        
-				 clientes = new GenerarClientes();
+				 clientes = new GenerarClientes(grafo);
 				clientes.setDebug(debug);
 				clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
-				if(compruebaCassandra()){
-				clientes.insertaGrafoCQL();
+				 if(debug)clientes.pintaTabla();
+				if(autoinserta){
+					if(esperaConexionCassandra()){
+				clientes.insertaGrafoCQL(true);
 				}
+		}
 			}
 		});
-		btnGenerarsecciones.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {		        
-				 grafo = new GenerarGrafo();
-				 grafo.setDebug(debug);
-				 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()));
-				 if(compruebaCassandra()){
-				 grafo.insertaGrafoCQL();
-				 }
-			}
-		});
+		
 		JButton btnHaztodo = new JButton("Haz todo");
 		verticalBox_2.add(btnHaztodo);
 		btnHaztodo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(!compruebaCassandra()){
-				 try {
-					    File currDir = new File(".\\apache-cassandra-2.0.9\\bin\\cassandra.bat");
-					    String path = currDir.getAbsolutePath();
-					    path = path.substring(0, path.length());
-					    String dir = path.substring(0, path.length()-13);
-						Runtime.getRuntime().exec("cmd /c cd "+dir+" && start "+path);
-						try {
-							Thread.sleep(5000);
-						} catch (InterruptedException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-				}
-				 limpiarBD();
-				 grafo = new GenerarGrafo();
-				 grafo.setDebug(debug);
-				 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()));
-				 grafo.pintaTabla();
-				 grafo.insertaGrafoCQL();
-				 grafo.pintaBD();
-				 clientes = new GenerarClientes();
-				 clientes.setDebug(debug);
-				 clientes.conectarClientes(grafo.numeroSecciones());
-				 clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
-				 clientes.insertaGrafoCQL(); 
-				 clientes.pintaBD();
+				Thread haztodoThread = new Thread() {
+				      public void run() {
+				    	  if(esperaConexionCassandra()){
+								 limpiarBD();
+								 grafo = new GenerarGrafo(Principal.this);
+								 grafo.setDebug(debug);
+								 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2);
+								 grafo.pintaTabla();
+								 grafo.insertaGrafoCQL();
+								 grafo.pintaBD();
+								 clientes = new GenerarClientes(grafo);
+								 clientes.setDebug(debug);
+								 clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
+								 clientes.conectarClientes(grafo.numeroSecciones());
+								 clientes.insertaGrafoCQL(true); 
+								 clientes.pintaBD();
+							}
+				      }
+				    };
+				    haztodoThread.start();
 			}
 		});
 		
@@ -390,17 +363,15 @@ public class Principal {
 		textArea.setRows(22);
 		//frame.getContentPane().add(textArea, BorderLayout.SOUTH);
 		JTextAreaOutputStream out = new JTextAreaOutputStream (textArea);
-		
-        System.setOut (new PrintStream (out));
+		System.setOut (new PrintStream (out));
         
 	}
 	
 	private void limpiarBD(){
-		Cluster cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
-	      Metadata metadata = cluster.getMetadata();
-	      if(debug)System.out.printf("Conectado al cluster: %s\n", metadata.getClusterName());
+		if(enciendeProcesoCassandra() && esperaConexionCassandra()){
+	      if(debug)System.out.printf("Conectado al cluster: %s\n", this.getCassandraCluster().getMetadata().getClusterName());
 	      if(debug){
-	    	  for ( Host host : metadata.getAllHosts() ) {
+	    	  for ( Host host : this.getCassandraCluster().getMetadata().getAllHosts() ) {
 	         System.out.printf("Datatacenter: %s; Host: %s; Rack: %s\n",
 	               host.getDatacenter(), host.getAddress(), host.getRack());
 	      }
@@ -411,10 +382,23 @@ public class Principal {
 		     session.execute("DROP KEYSPACE Bd;");
 		   } catch (InvalidQueryException e){ 
 		   }
+		}
 	}
 	
 	public void setDebug(boolean debug){
 		this.debug=debug;		
+	}
+	
+	public void setAutoInserta(boolean insertar){
+		this.autoinserta=insertar;
+	}
+	
+	public Cluster getCassandraCluster(){
+		return cluster;		
+	}
+	
+	public Session getCassandraSession(){
+		return session;
 	}
 	
 	public class JTextAreaOutputStream extends OutputStream
@@ -452,6 +436,7 @@ public class Principal {
 	
 	 private void apagaCassandra() {
 		    try {
+		      session.close();
 		      String line="cmd /c tasklist.exe /v  | find "+"\""+"Cassandra"+"\"";
 		      Process p = Runtime.getRuntime().exec(line);
 		      BufferedReader input = new BufferedReader
@@ -471,10 +456,28 @@ public class Principal {
 		    }
 		  }
 	 
-	private boolean compruebaCassandra() {
-		    boolean encendido=false;
-		    try {
-		      String line="cmd /c tasklist.exe /v  | find "+"\""+"Cassandra"+"\"";
+	private boolean enciendeProcesoCassandra(){
+		boolean encendido = false;
+		if(!compruebaProcesoCassandra()){
+		File currDir = new File(".\\apache-cassandra-2.0.9\\bin\\cassandra.bat");
+	    String path = currDir.getAbsolutePath();
+	    path = path.substring(0, path.length());
+	    String dir = path.substring(0, path.length()-13);
+		try {
+			Runtime.getRuntime().exec("cmd /c cd \""+dir+"\" && start cassandra.bat");
+			encendido=true;
+		} catch (IOException e) {
+			encendido=false;
+		}
+		}
+		System.out.println("Resultado enciendeProcesoCassandra:"+encendido);
+		return encendido;
+	}
+	 
+	private boolean compruebaProcesoCassandra(){
+		boolean encendido=false;
+		 try {
+		      String line="cmd /c tasklist.exe /v  | find "+"\""+"CassandraMaster"+"\"";
 		      Process p = Runtime.getRuntime().exec(line);
 		      BufferedReader input = new BufferedReader
 		          (new InputStreamReader(p.getInputStream()));
@@ -487,8 +490,59 @@ public class Principal {
 		      input.close();
 		    }
 		    catch (Exception err) {
-		      err.printStackTrace();
+		      encendido = false;
 		    }
+		System.out.println("Resultado comprueba:"+encendido);
+		return encendido;		
+	}
+	
+	private Cluster cluster = null;
+	private Session session = null;
+	
+	private boolean esperaConexionCassandra() {
+		    boolean encendido=false;
+			int tiempo = 0;
+			int espera=3;
+			int timeout=15;
+			encendido=false;
+			if(enciendeProcesoCassandra()){
+			while(!encendido && tiempo < (timeout/espera)){
+				try{
+					cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
+					Metadata metadata = cluster.getMetadata();
+				      if(debug)System.out.printf("Conectado al cluster: %s\n", metadata.getClusterName());
+				      if(debug){
+				    	  for ( Host host : metadata.getAllHosts() ) {
+				         System.out.printf("Datatacenter: %s; Host: %s; Rack: %s\n",
+				               host.getDatacenter(), host.getAddress(), host.getRack());
+				      }
+				      }
+				      session = cluster.connect();
+				      
+					encendido=true;
+				} catch (NoHostAvailableException e){ 
+				    try {
+				    	System.out.println("Intentando reconectar en "+espera+"s");
+						Thread.sleep(espera*1000);
+						timeout++;
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				   }
+				catch (RejectedExecutionException e2){ 
+				    try {
+				    	System.out.println("Intentando reconectar en "+espera+"s");
+						Thread.sleep(espera*1000);
+						timeout++;
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				   }
+				}
+			}
+			if(tiempo==timeout/espera){System.out.println("Dio timeout");}
 		    return encendido;
-		  }
-}
+	}
+	}
