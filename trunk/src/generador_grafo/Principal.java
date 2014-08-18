@@ -289,7 +289,7 @@ public class Principal {
 				 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2);
 				 if(debug)grafo.pintaTabla();
 				 if(autoinserta&&esperaConexionCassandra()){
-				 grafo.insertaGrafoCQL();
+				 grafo.insertaGrafoCQL(true);
 				 }
 				      }
 				    };
@@ -301,7 +301,7 @@ public class Principal {
 		verticalBox_2.add(btnGenerarClientes);
 		btnGenerarClientes.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {		        
-				 clientes = new GenerarClientes(grafo);
+				 clientes = new GenerarClientes(grafo,Principal.this);
 				clientes.setDebug(debug);
 				clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
 				 if(debug)clientes.pintaTabla();
@@ -325,9 +325,9 @@ public class Principal {
 								 grafo.setDebug(debug);
 								 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2);
 								 grafo.pintaTabla();
-								 grafo.insertaGrafoCQL();
+								 grafo.insertaGrafoCQL(true);
 								 grafo.pintaBD();
-								 clientes = new GenerarClientes(grafo);
+								 clientes = new GenerarClientes(grafo,Principal.this);
 								 clientes.setDebug(debug);
 								 clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
 								 clientes.conectarClientes(grafo.numeroSecciones());
@@ -344,7 +344,7 @@ public class Principal {
 		verticalBox_2.add(btnEncuentraCaminos);
 		btnEncuentraCaminos.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				RecorreGrafo recorre = new RecorreGrafo();
+				RecorreGrafo recorre = new RecorreGrafo(Principal.this);
 				recorre.setDebug(true);
 				recorre.consultaExtremoGrafoSQL(0);
 			}
