@@ -1,7 +1,5 @@
 package generador_grafo;
 import java.util.Random;
-import java.util.UUID;
-
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
