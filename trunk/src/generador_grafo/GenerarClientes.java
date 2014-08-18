@@ -20,7 +20,12 @@ public class GenerarClientes {
 	private int[][] arrayClientes;
 	private Random rand = new Random();
     private boolean debug=false;
+    private GenerarGrafo grafo;
 	
+    public GenerarClientes(GenerarGrafo grafo){
+    	this.grafo=grafo;
+    }
+    
 	private int randInt(int min, int max) {
 	    int randomNum = rand.nextInt((max - min) + 1) + min;
 	    return randomNum;
@@ -56,8 +61,13 @@ public class GenerarClientes {
 	}
 	
 	public void conectarClientes(int numSecciones){
+		int puntoConexion;
 		for (int i=0;i<arrayClientes.length;i++){
-			arrayClientes[i][1]=randInt(0,numSecciones);
+			puntoConexion=randInt(1,numSecciones);
+			while(!grafo.compruebaSiConexion(puntoConexion)){
+				puntoConexion=randInt(1,numSecciones);
+			}
+			arrayClientes[i][1]=puntoConexion;
 		}
 	}
 	
@@ -123,7 +133,7 @@ public class GenerarClientes {
 	}
 
 
-	public void insertaGrafoCQL(){
+	public void insertaGrafoCQL(boolean recreaBD){
 		conecta();
 		try{
 	    	  session.execute("USE BD");
@@ -131,17 +141,21 @@ public class GenerarClientes {
 	    	  session.execute("CREATE KEYSPACE BD WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
 	    	  session.execute("USE BD");
 	      }
-		 try{
-	    	  session.execute("SELECT id FROM clientes LIMIT 1");	    	  
+		
+		try{
+	    	  session.execute("SELECT id FROM clientes LIMIT 1");
+	    	  if(recreaBD){
+	    		  session.execute("DROP TABLE clientes");
+	    		  session.execute("CREATE TABLE clientes (id int PRIMARY KEY,idseccion int, consumoActual int)"); 	  
+	  		}
 	      }catch (InvalidQueryException e){
-	    	  session.execute("CREATE TABLE clientes (id uuid PRIMARY KEY, consumoActual int)"); 	  
+	    	  session.execute("CREATE TABLE clientes (id int PRIMARY KEY, idseccion int,consumoActual int)"); 	  
 	      }
 		
-		   PreparedStatement ps = session.prepare("INSERT INTO clientes (id, consumoActual) VALUES (?, ?)");
+		   PreparedStatement ps = session.prepare("INSERT INTO clientes (id, idseccion,consumoActual) VALUES (?, ?, ?)");
 		   BatchStatement batch = new BatchStatement();
-		   int i,j;
-		   for(i=0;i<arrayClientes.length;i++){
-			batch.add(ps.bind(UUID.randomUUID(),arrayClientes[i]));
+		   for(int i=0;i<arrayClientes.length;i++){
+			batch.add(ps.bind(i,arrayClientes[i][1],arrayClientes[i][0]));
 		   }
 			session.execute(batch);
 		  desconecta();
@@ -158,11 +172,11 @@ public class GenerarClientes {
 	      }
 	      if(!vacia){
 	    	  ResultSet results = session.execute("SELECT * FROM clientes");
-	          System.out.println(String.format("%-80s%-12s","id", "consumoActual"));
+	          System.out.println(String.format("%-12s%-12s%-12s","id","idseccion", "consumoActual"));
 	   		for (Row row : results) {
-	   			System.out.println(String.format("%s","-----------------------------------------------------------+-------------------"));
+	   			System.out.println(String.format("%s","--------+---------+-------------------"));
 	   				
-	   		   System.out.println(String.format("%-46.46s%-20d", row.getUUID("id"),row.getInt("consumoActual")));
+	   		   System.out.println(String.format("%-20d%-20d%-20d", row.getInt("id"),row.getInt("idseccion"),row.getInt("consumoActual")));
 	   		}
 			System.out.println();
 	      }
