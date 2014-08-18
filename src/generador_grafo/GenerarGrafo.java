@@ -170,7 +170,7 @@ public class GenerarGrafo {
 		return l;			
 	}
 	
-	public void insertaGrafoCQL(){
+	public void insertaGrafoCQL(boolean recreaBD){
 	      try{
 	    	  principal.getCassandraSession().execute("USE Bd");
 	      }catch (InvalidQueryException e){
@@ -178,7 +178,11 @@ public class GenerarGrafo {
 	    	  principal.getCassandraSession().execute("USE Bd");
 	      }
 	      try{
-	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");	
+	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");
+	    	  if(recreaBD){
+	    		  principal.getCassandraSession().execute("DROP TABLE vertices");
+	    		  principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
+	      	  }
 	    	       }catch (InvalidQueryException e){
 	    	    	   principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
 	    		    	  
