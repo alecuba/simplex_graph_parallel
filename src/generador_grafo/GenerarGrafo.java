@@ -181,11 +181,14 @@ public class GenerarGrafo {
 	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");
 	    	  if(recreaBD){
 	    		  principal.getCassandraSession().execute("DROP TABLE vertices");
-	    		  principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
+	    		  principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON vertices (vertA)");
+	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON vertices (vertB)");
 	      	  }
 	    	       }catch (InvalidQueryException e){
-	    	    	   principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
-	    		    	  
+	    	    	   principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    	    	   principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON vertices (vertA)");
+	 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON vertices (vertB)");
 	    	    		 System.out.println("Error vertices\n");}
 	      try{ 
 	    	  principal.getCassandraSession().execute("SELECT idseccion FROM Bd.caracteristicasVertices LIMIT 1");
