@@ -344,9 +344,18 @@ public class Principal {
 		verticalBox_2.add(btnEncuentraCaminos);
 		btnEncuentraCaminos.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				RecorreGrafo recorre = new RecorreGrafo(Principal.this);
-				recorre.setDebug(true);
-				recorre.consultaExtremoGrafoSQL(0);
+				Thread haztodoThread = new Thread() {
+				      public void run() {
+				    	  if(esperaConexionCassandra()){
+				    			RecorreGrafo recorre = new RecorreGrafo(Principal.this);
+								recorre.setDebug(true);
+								System.out.println("1\n");
+								recorre.consultaExtremoGrafoSQL(0);
+							}
+				      }
+				    };
+				    haztodoThread.start();
+		
 			}
 		});
 		
@@ -458,14 +467,14 @@ public class Principal {
 	 
 	private boolean enciendeProcesoCassandra(){
 		boolean encendido = false;
-		if(!compruebaProcesoCassandra()){
+		encendido=compruebaProcesoCassandra();
+		if(!encendido){
 		File currDir = new File(".\\apache-cassandra-2.0.9\\bin\\cassandra.bat");
 	    String path = currDir.getAbsolutePath();
 	    path = path.substring(0, path.length());
 	    String dir = path.substring(0, path.length()-13);
 		try {
 			Runtime.getRuntime().exec("cmd /c cd \""+dir+"\" && start cassandra.bat");
-			encendido=true;
 		} catch (IOException e) {
 			encendido=false;
 		}
@@ -492,7 +501,7 @@ public class Principal {
 		    catch (Exception err) {
 		      encendido = false;
 		    }
-		System.out.println("Resultado comprueba:"+encendido);
+		System.out.println("Resultado compruebaProcesoCassandra:"+encendido);
 		return encendido;		
 	}
 	

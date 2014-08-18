@@ -22,14 +22,16 @@ public class RecorreGrafo {
 		public CaminoCliente siguiente;		
 	};
 	
-	private int[] consultarSiguientesSaltos(int id,int idseccion){
-			CaminoClienteN[id].id=idseccion;
-			CaminoClienteN[id].siguiente=null; 
+	private int[] consultarSiguientesSaltos(int idcliente,int idanterior,int idseccionnueva){
+			
+		CaminoClienteN[id].id=idanterior;
+		CaminoClienteN[id].siguiente=null; 
 		//principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
+		System.out.print("Seccionactual("+idseccionnueva+")");
 		int[] resultados=null;
 		try{
-		      ResultSet resultsA = principal.getCassandraSession().execute("SELECT vertB FROM Bd.vertices WHERE vertA="+i);
-		      ResultSet resultsB = principal.getCassandraSession().execute("SELECT vertA FROM Bd.vertices WHERE vertB="+i);
+		      ResultSet resultsA = principal.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+idseccionnueva);
+		      ResultSet resultsB = principal.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+idseccionnueva);
 		      List<Row> rowsA = resultsA.all();
 		      List<Row> rowsB = resultsB.all();
 		      int pos=0;
@@ -46,7 +48,10 @@ public class RecorreGrafo {
 			  System.out.print(" caminos Posibles:");
 			  for(int j=0;j<resultados.length;j++){
 				  System.out.print(resultados[j]+",");
-			  }
+				  }
+	          }
+			  for(int j=0;j<resultados.length;j++){
+				  consultarSiguientesSaltos(resultados[j]);
 			  }
 		      }catch (InvalidQueryException e){
 		    	  if(debug)System.out.printf("errorconsultaconsultarSiguientesSaltos\n");
