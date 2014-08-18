@@ -1,28 +1,21 @@
 package generador_grafo;
 import java.util.Random;
-import java.util.UUID;
-
 import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
 public class GenerarGrafo {
-	private int minSecciones = 6;
-	private int maxSecciones = 10;
-	private int minCruces=1;
-	private int maxCruces=3;
-	private int minEntradas=1;
-	private int maxEntradas=2;
 	private int[][] tablaGrafo;
 	private static Random rand = new Random();
     private boolean debug=false;
-	
+	private Principal principal;
+    
+    public GenerarGrafo(Principal principal){
+    	this.principal=principal;
+    }
+    
 	private int randInt(int min, int max) {
 	    int randomNum = rand.nextInt((max - min) + 1) + min;
 	    return randomNum;
@@ -33,76 +26,83 @@ public class GenerarGrafo {
 	}
 	
 	
-	public void generar(int minSecciones,int maxSecciones,int minCruces,int maxCruces){
-		this.minSecciones=minSecciones;
-		if(maxSecciones<minSecciones){
-			this.maxSecciones = minSecciones;
-		}else{
-			this.maxSecciones=maxSecciones;
-		}
-		this.minCruces=minCruces;
-		if(maxCruces<minCruces){
-			this.maxCruces = minCruces;
-		}else{
-			this.maxCruces=maxCruces;
-		}
-		algoritmoGenera();
+	public void generar(int minSecciones,int maxSecciones,int minCruces,int maxCruces,int minEntradas,int maxEntradas){
+		if(maxSecciones<minSecciones) maxSecciones = minSecciones;
+		if(maxCruces<minCruces) maxCruces = minCruces;
+		int seccionesActual=randInt(minSecciones,maxSecciones);
+		if(maxEntradas>seccionesActual) maxEntradas=seccionesActual;
+		if(minEntradas>maxEntradas)	minEntradas=maxEntradas;
+		int entradasActual=randInt(minEntradas,maxEntradas);
+		algoritmoGeneraSecciones(seccionesActual,minCruces,maxCruces);
+		algoritmoGeneraEntradas(entradasActual);
 		//preparaEntradaGrafo();
 	}
 	
-	private void algoritmoGenera(){
-		ArbolVisitados verticesVisitados = new ArbolVisitados(debug);
-		int nsecciones=0;
-		int ncruces_generados;
-		int i,j;
-		int ncruces_minActual;
-		int ncruces_maxActual;
-		int seccionesActual=randInt(minSecciones,maxSecciones);
-		if(debug) System.out.print("Secciones("+seccionesActual+") \n");
-		tablaGrafo=new int[seccionesActual][seccionesActual];
-		while(nsecciones<seccionesActual){
-			i=randInt(0,seccionesActual-1);
-			if(!verticesVisitados.isVisitado(i)){
-			verticesVisitados.insertar(i);
-			j=randInt(0,seccionesActual-1);
-			ncruces_generados=0;
-			if(i==0){ncruces_maxActual = maxEntradas;ncruces_minActual=minEntradas;}else{ncruces_minActual=randInt(minCruces,maxCruces);}
-			while((ncruces_generados <= ncruces_minActual) && (ncruces_generados<=maxCruces) && (nsecciones<seccionesActual)){
-					if(debug) System.out.print("(ncruces_generados<=ncruces_maxActual):"+(ncruces_generados<=maxCruces)
-												+" (nsecciones<secciones):"+(nsecciones<seccionesActual)
-												+" (ncruces_generados < MIN_CRUCES):"+(ncruces_generados < minCruces)
-												+" i("+i+") j("+j+") ncruces_generados("+ncruces_generados+") nsecciones("
-												+nsecciones+") ncruces_minActual("+ncruces_minActual+") secciones("+seccionesActual+")");
-					if(i!=j){
-						tablaGrafo[i][j]=tablaGrafo[j][i]=randInt(0,1);
-						if(tablaGrafo[i][j]==1){
-						ncruces_generados++;
-						nsecciones++;
-						}
-					
+	private void algoritmoGeneraEntradas(int entradasActual){
+		int nEntradas=0;
+		int j=randInt(0,this.tablaGrafo.length-1);
+		while(nEntradas<=entradasActual){
+			while(tablaGrafo[0][j]==1){
+				j=randInt(0,tablaGrafo.length-1);
+			}
+			tablaGrafo[0][j]=tablaGrafo[j][0]=randInt(0,1);
+			if(tablaGrafo[0][j]==1){
+				nEntradas++;
+			}
+		}
+	}
+	private int cuentaCrucesVerticeActual(int i){
+		int ncruces_generados=0;
+		for(int j=1;j<tablaGrafo[i].length;j++){
+			if(tablaGrafo[i][j]==1 ||tablaGrafo[j][i]==1 ){
+				ncruces_generados++;
+			}
+		}
+		if(debug) System.out.print("Habian("+ncruces_generados+"),cruces en ("+i+")\n");
+		return ncruces_generados;
+	}
+	
+	private void algoritmoGeneraSecciones(int nseccionesMaxGrafo, int minCruces, int maxCruces){
+		int nseccionesAcumuladas=0;
+		int ncrucesActumuladosActual=0;
+		int i=randInt(1,nseccionesMaxGrafo);
+		int j=randInt(1,nseccionesMaxGrafo);
+		int numeroRandom;
+		int ncrucesActual;
+		tablaGrafo=new int[nseccionesMaxGrafo+1][nseccionesMaxGrafo+1];
+		while(nseccionesAcumuladas<=nseccionesMaxGrafo){
+			while(tablaGrafo[i][0]==1){//Generamos una i que no hayamos puesto a 1
+				i=randInt(1,nseccionesMaxGrafo);
+			}
+			tablaGrafo[i][0]=1;
+			ncrucesActumuladosActual=cuentaCrucesVerticeActual(i);
+			ncrucesActual=randInt(minCruces,maxCruces);
+			while((ncrucesActumuladosActual < ncrucesActual) && (nseccionesAcumuladas<=nseccionesMaxGrafo)){   
+					while(tablaGrafo[i][j]==1 || i==j || (cuentaCrucesVerticeActual(j)> maxCruces)){//Generamos una j que no hayamos puesto a 1
+						j=randInt(1,nseccionesMaxGrafo);
 					}
-					j=randInt(0,seccionesActual-1);
-					if(debug) System.out.print(" newj("+j+")\n"); 
+                    if(debug) System.out.println(
+								"(ncrucesActumuladosActual <= ncrucesActual):"+(ncrucesActumuladosActual <= ncrucesActual)
+								+" (nsecciones<=nseccionesMaxGrafo):"+(nseccionesAcumuladas<=nseccionesMaxGrafo)
+								+" i("+i+") j("+j+") ncrucesActumuladosActual("+ncrucesActumuladosActual+") nseccionesAcumuladas("
+								+nseccionesAcumuladas+") nseccionesMaxGrafo("+nseccionesMaxGrafo+")");
+						numeroRandom=randInt(0,1);
+						if(numeroRandom==1){
+							tablaGrafo[i][j]=tablaGrafo[j][i]=1;
+							ncrucesActumuladosActual++;
+							nseccionesAcumuladas++;
+						}
 				}
 			}
-			
-			
+		//Limpieza de primera columna y fila usada para ver si visitado
+		for(j=0;j<=nseccionesMaxGrafo;j++){
+			tablaGrafo[0][j]=0;
+			tablaGrafo[j][0]=0;
 		}
 	}
 	
 	
-	private int logitudNumero(int n)
-	{
-		int l;
-		if(n>0){
-		n=Math.abs(n);
-		for (l=0;n>0;++l)
-			n/=10;
-		}else{
-			l=1;
-		}
-		return l;			
-	}
+
 	
 	public void pintaTabla(){
 		if(debug)System.out.println("\nTabla");
@@ -157,58 +157,40 @@ public class GenerarGrafo {
 		System.out.print("\n");
 	}
 	
-	
-	
-	public void preparaEntradaGrafo(){
-		boolean entrada=false;
-		int j=0;
-		int seccionesActual=tablaGrafo.length;
-		 if(debug){System.out.print("tablaGrafo.length:"+tablaGrafo.length+"\n");}
-		while(j<seccionesActual && !entrada){
-		  if(tablaGrafo[0][j]==1){
-			  entrada=true;
-			  if(debug){System.out.print("Encontrado entrada en[0]["+j+"]\n");}
-			}
-			j++;
+	private int logitudNumero(int n)
+	{
+		int l;
+		if(n>0){
+		n=Math.abs(n);
+		for (l=0;n>0;++l)
+			n/=10;
+		}else{
+			l=1;
 		}
-		if(!entrada){
-		  j=randInt(1,seccionesActual-1);
-		  if(debug){System.out.print("No habia entrada, se ha creado una en [0]["+j+"]\n");}
-		  tablaGrafo[0][j]=1;
-		  tablaGrafo[j][0]=1;
-		}
-		
-	}
-	
-	private Session session;
-	
-	private void conecta(){
-		Cluster cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
-	      Metadata metadata = cluster.getMetadata();
-	      if(debug)System.out.printf("Conectado al cluster: %s\n", metadata.getClusterName());
-	      if(debug){
-	    	  for ( Host host : metadata.getAllHosts() ) {
-	         System.out.printf("Datatacenter: %s; Host: %s; Rack: %s\n",
-	               host.getDatacenter(), host.getAddress(), host.getRack());
-	      }
-	      }
-	      session = cluster.connect();
+		return l;			
 	}
 	
 	public void insertaGrafoCQL(){
-		  conecta();
-		  session.execute("CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
-	      session.execute("USE Bd");
 	      try{
-	    	  session.execute("SELECT id FROM extremosNodos LIMIT 1");	    	  
+	    	  principal.getCassandraSession().execute("USE Bd");
 	      }catch (InvalidQueryException e){
-	    	  session.execute("CREATE TABLE extremosNodos (id uuid PRIMARY KEY,idseccion text, extremo int)");
-	    	  session.execute("CREATE TABLE caracteristicasNodos (idseccion text PRIMARY KEY, consumoMax int, coste float)");
-			  session.execute("CREATE INDEX extremo_IDX ON extremosNodos (extremo)");    	  
+	    	  principal.getCassandraSession().execute("CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
+	    	  principal.getCassandraSession().execute("USE Bd");
 	      }
-	    	  
-		   PreparedStatement psExtremos = session.prepare("INSERT INTO extremosNodos (id,idseccion, extremo) VALUES (?, ?, ?)");
-		   PreparedStatement psCaracteristicas = session.prepare("INSERT INTO caracteristicasNodos (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
+	      try{
+	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");	
+	    	       }catch (InvalidQueryException e){
+	    	    	   principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
+	    		    	  
+	    	    		 System.out.println("Error vertices\n");}
+	      try{ 
+	    	  principal.getCassandraSession().execute("SELECT idseccion FROM Bd.caracteristicasVertices LIMIT 1");
+	    	    }catch (InvalidQueryException e){
+	    	    	 principal.getCassandraSession().execute("CREATE TABLE caracteristicasVertices (idseccion text PRIMARY KEY, consumoMax int, coste float)");
+				  	System.out.println("Error caracteristicasVertices\n");}	    
+	      
+	      PreparedStatement psExtremos = principal.getCassandraSession().prepare("INSERT INTO Bd.vertices (vertA,vertB,idseccion) VALUES (?, ?, ?)");
+		   PreparedStatement psCaracteristicas = principal.getCassandraSession().prepare("INSERT INTO Bd.caracteristicasVertices (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
 		   BatchStatement batch = new BatchStatement();
 		   int i,j,consumoMax;
 		   float coste;
@@ -220,21 +202,17 @@ public class GenerarGrafo {
 				  consumoMax=randInt(1000,20000);
 				  coste=randfloat((float)0.1,(float)1.5);
 				  idseccion=String.valueOf(i)+"_"+String.valueOf(j);
-				  batch.add(psExtremos.bind(UUID.randomUUID(),idseccion,i));
-				  batch.add(psExtremos.bind(UUID.randomUUID(),idseccion,j));				  
+				  batch.add(psExtremos.bind(i,j,idseccion));		  
 				  batch.add(psCaracteristicas.bind(idseccion,consumoMax,coste));
 				  //batch.add(ps.bind(UUID.randomUUID(),j, i,consumoMax,coste));
 			//batch.add(ps.bind(UUID.randomUUID(),j, i,randInt(1000,20000),randfloat((float)0.1,(float)1.5)));
 				   }
 			}
 		   }
-			session.execute(batch);
-			desconecta();
+		   principal.getCassandraSession().execute(batch);
 	}
 	
-	private void desconecta(){
-		session.close();
-	}
+
 	
 	private static float randfloat(float min, float max) {
 		     float randomNum=((max - min) * rand.nextFloat()) + min;
@@ -246,38 +224,47 @@ public class GenerarGrafo {
 		
 	}
 	
+	public boolean compruebaSiConexion(int i){
+		boolean conexion=false;
+		int j=1;
+		if(i>0){
+		while(j<tablaGrafo.length && !conexion){
+			if(tablaGrafo[i][j]==1) conexion=true;
+			j++;
+		}}
+		return conexion;		
+	}
+	
 	public void pintaBD(){
 		boolean vacia=false;
-		conecta();
 	      try{
-			     session.execute("USE Bd");      
+			     principal.getCassandraSession().execute("USE Bd");      
 	      }catch (InvalidQueryException e){
 	    	  vacia=true;
 	    	  System.out.println("Vacia o no existe BD\n");
 	      }
 	      if(!vacia){
-	    	  ResultSet results = session.execute("SELECT * FROM extremosNodos");
-	          System.out.println(String.format("%-80s%-14s",
-	          		"id", "extremo"));
+	    	  ResultSet results = principal.getCassandraSession().execute("SELECT * FROM vertices");
+	          System.out.println(String.format("%-14s%-14s%-14s",
+	          		"idseccion", "vertA","vertB"));
 	   		for (Row row : results) {
 	   			System.out.println(String.format("%s",
-	   				       "-----------------------------------------------------------+---------------"));
+	   				       "---------------+---------------+---------------"));
 	   				
-	   		   System.out.println(String.format("%-46.46s%-20s", row.getUUID("id"),
-	   		    	row.getInt("extremo")));
+	   		   System.out.println(String.format("%-20s%-20s%-20s", row.getString("idseccion"),
+	   		    	row.getInt("vertA"),row.getInt("vertB")));
 	   		}
 			System.out.println();
-			results = session.execute("SELECT * FROM caracteristicasNodos");
-	          System.out.println(String.format("%-80s%-14s%-5s",
-	          		"id", "consumoMax","coste"));
+			results = principal.getCassandraSession().execute("SELECT * FROM caracteristicasVertices");
+	          System.out.println(String.format("%-14s%-14s%-5s",
+	          		"idseccion", "consumoMax","coste"));
 	   		for (Row row : results) {
 	   			System.out.println(String.format("%s",
-	   				       "-----------------------------------------------------------+---------------+-----------"));
-	   		   System.out.println(String.format("%-46.46s%-20s%-3.1f", row.getString("idseccion"),row.getInt("consumoMax"),  row.getFloat("coste")));
+	   				       "---------------+---------------+-----------"));
+	   		   System.out.println(String.format("%-20s%-20s%-3.1f", row.getString("idseccion"),row.getInt("consumoMax"),  row.getFloat("coste")));
 	   		}
 			System.out.println();
 	      }
-	      desconecta();
 	     }
 }
 
