@@ -180,21 +180,23 @@ public class GenerarGrafo {
 	      try{
 	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");
 	    	  if(recreaBD){
-	    		  principal.getCassandraSession().execute("DROP TABLE vertices");
-	    		  principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    		  principal.getCassandraSession().execute("DROP TABLE Bd.vertices");
+	    		  principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON vertices (vertA)");
 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON vertices (vertB)");
 	      	  }
 	    	       }catch (InvalidQueryException e){
-	    	    	   principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
-	    	    	   principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON vertices (vertA)");
-	 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON vertices (vertB)");
-	    	    		 System.out.println("Error vertices\n");}
+	    	    	   System.out.println("No habia tabla vertices Recreando\n");
+	    	    	   principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    	    	   principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON Bd.vertices (vertA)");
+	 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON Bd.vertices (vertB)");
+	  }
 	      try{ 
 	    	  principal.getCassandraSession().execute("SELECT idseccion FROM Bd.caracteristicasVertices LIMIT 1");
 	    	    }catch (InvalidQueryException e){
-	    	    	 principal.getCassandraSession().execute("CREATE TABLE caracteristicasVertices (idseccion text PRIMARY KEY, consumoMax int, coste float)");
-				  	System.out.println("Error caracteristicasVertices\n");}	    
+	    	    	System.out.println("No habia tabla caracteristicasVertices Recreando\n");
+	    	    	 principal.getCassandraSession().execute("CREATE TABLE Bd.caracteristicasVertices (idseccion text PRIMARY KEY, consumoMax int, coste float)");
+	    	    	 }	    
 	      
 	      PreparedStatement psExtremos = principal.getCassandraSession().prepare("INSERT INTO Bd.vertices (vertA,vertB,idseccion) VALUES (?, ?, ?)");
 		   PreparedStatement psCaracteristicas = principal.getCassandraSession().prepare("INSERT INTO Bd.caracteristicasVertices (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
