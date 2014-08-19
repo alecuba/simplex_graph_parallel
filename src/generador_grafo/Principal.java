@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.RejectedExecutionException;
+
 import javax.swing.AbstractButton;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
@@ -20,7 +21,9 @@ import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+
 import java.awt.BorderLayout;
+
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -28,7 +31,9 @@ import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.text.DefaultCaret;
+
 import busquedaGrafo.RecorreGrafo;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
@@ -238,7 +243,7 @@ public class Principal {
 		horizontalBox_4.add(lblMinclientes);
 		
 		txtMinclientes = new JTextField();
-		txtMinclientes.setText("10");
+		txtMinclientes.setText("3");
 		txtMinclientes.setColumns(10);
 		horizontalBox_4.add(txtMinclientes);
 		
@@ -249,7 +254,7 @@ public class Principal {
 		horizontalBox_5.add(lblMaxclientes);
 		
 		txtMaxclientes = new JTextField();
-		txtMaxclientes.setText("20");
+		txtMaxclientes.setText("4");
 		txtMaxclientes.setColumns(10);
 		horizontalBox_5.add(txtMaxclientes);
 		
@@ -282,7 +287,7 @@ public class Principal {
 		verticalBox_2.add(btnGenerarsecciones);
 		btnGenerarsecciones.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				 Thread haztodoThread = new Thread() {
+				 Thread generarSeccionesThread = new Thread() {
 				      public void run() {
 				 grafo = new GenerarGrafo(Principal.this);
 				 grafo.setDebug(debug);
@@ -293,14 +298,16 @@ public class Principal {
 				 }
 				      }
 				    };
-				    haztodoThread.start();
+				    generarSeccionesThread.start();
 			}
 		});
 		
 		JButton btnGenerarClientes = new JButton("Generar Clientes");
 		verticalBox_2.add(btnGenerarClientes);
 		btnGenerarClientes.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {		        
+			public void actionPerformed(ActionEvent e) {		  
+				 Thread generarClientesThread = new Thread() {
+				      public void run() {
 				 clientes = new GenerarClientes(grafo,Principal.this);
 				clientes.setDebug(debug);
 				clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
@@ -309,8 +316,10 @@ public class Principal {
 					if(esperaConexionCassandra()){
 				clientes.insertaGrafoCQL(true);
 				}
+			     }
+					    }};
+					    generarClientesThread.start();
 		}
-			}
 		});
 		
 		JButton btnHaztodo = new JButton("Haz todo");
@@ -344,17 +353,33 @@ public class Principal {
 		verticalBox_2.add(btnEncuentraCaminos);
 		btnEncuentraCaminos.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				Thread haztodoThread = new Thread() {
+				Thread encuentraCaminosThread = new Thread() {
 				      public void run() {
 				    	  if(esperaConexionCassandra()){
+				    		  limpiarBD();
+								 grafo = new GenerarGrafo(Principal.this);
+								 grafo.setDebug(debug);
+								 grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2);
+								 grafo.pintaTabla();
+								 grafo.insertaGrafoCQL(true);
+								 grafo.pintaBD();
+								 clientes = new GenerarClientes(grafo,Principal.this);
+								 clientes.setDebug(debug);
+								 clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
+								 clientes.conectarClientes(grafo.numeroSecciones());
+								 clientes.insertaGrafoCQL(true); 
+								 clientes.pintaBD();
 				    			RecorreGrafo recorre = new RecorreGrafo(Principal.this);
 								recorre.setDebug(true);
 								System.out.println("1\n");
-								recorre.consultaExtremoGrafoSQL(0);
+								System.out.println("Numero vertices:"+recorre.consultaNumeroVertices());
+								recorre.consultaExtremoGrafoSQL();
+								//recorre.consultaExtremoGrafoSQL(0);
+								recorre.caminosGenerados();
 							}
 				      }
 				    };
-				    haztodoThread.start();
+				    encuentraCaminosThread.start();
 		
 			}
 		});
@@ -444,6 +469,7 @@ public class Principal {
 	}
 	
 	 private void apagaCassandra() {
+		 /*
 		    try {
 		      session.close();
 		      String line="cmd /c tasklist.exe /v  | find "+"\""+"Cassandra"+"\"";
@@ -462,7 +488,7 @@ public class Principal {
 		    }
 		    catch (Exception err) {
 		      err.printStackTrace();
-		    }
+		    }*/
 		  }
 	 
 	private boolean enciendeProcesoCassandra(){
@@ -475,7 +501,13 @@ public class Principal {
 	    String dir = path.substring(0, path.length()-13);
 		try {
 			Runtime.getRuntime().exec("cmd /c cd \""+dir+"\" && start cassandra.bat");
+			Thread.sleep(2000);
+			encendido=compruebaProcesoCassandra();
 		} catch (IOException e) {
+			encendido=false;
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 			encendido=false;
 		}
 		}
