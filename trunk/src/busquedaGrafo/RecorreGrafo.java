@@ -93,6 +93,10 @@ public class RecorreGrafo {
 			   		  }
 					  if(resultados[j]!=0){
 						  generaCaminos();
+					  }else{
+						  caminosFinal.add(caminos.get(caminos.size()-1));
+						  caminos.remove(caminos.size()-1);
+						  if(debug) System.out.print(" \nEncontre el 0");  
 					  }
 				  }
 			  }
@@ -118,7 +122,8 @@ private class Camino{
    }
    
    private ArrayList<Camino> caminos=new ArrayList<Camino>();
-    void sigueCamino(int idcamino,int camino, int vertActual){
+   private ArrayList<Camino> caminosFinal=new ArrayList<Camino>();
+   void sigueCamino(int idcamino,int camino, int vertActual){
 	   /*caminos[idcliente][idcamino][camino]=vertActual;
 	    * camino++;
 	    * Select vertA,vertB where A,B = vertActual
@@ -153,7 +158,7 @@ private class Camino{
    	public void caminosGenerados(){
    		System.out.println(String.format("%-14s%-14s%-14s","cliente", "idcamino","secciones"));
    		System.out.println(String.format("%s","---------------+---------------+---------------"));
-   		Iterator<Camino> itr = caminos.iterator();
+   		Iterator<Camino> itr = caminosFinal.iterator();
    		while(itr.hasNext())
    		{
    		 Camino caminotemp=itr.next();
@@ -181,7 +186,7 @@ private class Camino{
    			generaCaminos();
    			//consultarSiguientesSaltos(row.getInt("id"),row.getInt("idseccion"));
    		}
-   		limpiaCaminosSinSalida();
+   		//limpiaCaminosSinSalida();
 	      }catch (InvalidQueryException e){
 	    	  if(debug)System.out.printf("errorconsulta\n");
 	      }
