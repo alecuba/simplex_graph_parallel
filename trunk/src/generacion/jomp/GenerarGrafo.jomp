@@ -1,0 +1,349 @@
+package generacion.jomp;
+
+import java.util.Random;
+import gui.Principal;
+import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.exceptions.InvalidQueryException;
+
+public class GenerarGrafo {
+	private int[][] tablaGrafo;
+	private static Random rand = new Random(System.currentTimeMillis());
+    private boolean debug=false;
+	private Principal principal;
+    
+    public GenerarGrafo(Principal principal){
+    	jomp.runtime.OMP.setNumThreads(4);
+    	this.principal=principal;
+    }
+    
+	private int randInt(int min, int max) {
+	    int randomNum = rand.nextInt((max - min) + 1) + min;
+	    return randomNum;
+	}
+	
+	public void setDebug(boolean debug){
+		this.debug=debug;	
+	}
+	
+	
+
+		public void generar(int minSecciones,int maxSecciones,int minCruces,int maxCruces,int minEntradas,int maxEntradas){
+			
+			if(maxCruces<minCruces) maxCruces = minCruces;
+			int anchoTabla=maxCruces+2;
+			int nSeccionesmin=minCruces*(anchoTabla-1);
+			int nSeccionesmax=maxCruces*(anchoTabla-1);
+			if(nSeccionesmin>=minSecciones && nSeccionesmax<=maxSecciones){
+				if(maxEntradas>anchoTabla) maxEntradas=anchoTabla;
+				if(minEntradas>maxEntradas)	minEntradas=maxEntradas;
+				int entradasActual=randInt(minEntradas, maxEntradas);
+				tablaGrafo=new int[anchoTabla+2][anchoTabla+2];
+				//algoritmoGeneraSeccionesSingle(nSeccionesmin,nSeccionesmax,minCruces,maxCruces);
+				algoritmoGeneraSecciones(nSeccionesmin,nSeccionesmax,minCruces,maxCruces);
+				if(debug)System.out.println("Termine de generar");
+				//algoritmoGeneraSeccionesTest();
+				algoritmoGeneraEntradas(entradasActual);
+				//preparaEntradaGrafo();
+			}else{
+				System.out.println("No hay combinacion posible");
+			}
+	}
+	
+	private void algoritmoGeneraEntradas(int entradasActual){
+		int nEntradas=0;
+		//omp parallel shared(nEntradas)
+		{
+		while(nEntradas<=entradasActual){
+			int j=randInt(0,tablaGrafo.length-1);
+			while(tablaGrafo[0][j]==1){
+				j=randInt(0,tablaGrafo.length-1);
+			}
+			int valor=randInt(0,1);
+			//omp critical
+			{
+			tablaGrafo[0][j]=valor;
+			tablaGrafo[j][0]=valor;
+			}
+			if(valor==1){
+				nEntradas++;
+			}
+		}
+		}
+	}
+	private int cuentaCrucesDeUnNodo(int i){
+		int nCrucesGenerados=0;
+		int j=1;
+		/*//omp parallel for default(shared) reduction(+:nCrucesGenerados)*/
+		for(j=1;j<tablaGrafo[i].length;j++){
+			if(tablaGrafo[i][j]==1 ||tablaGrafo[j][i]==1 ){
+				nCrucesGenerados++;
+			}
+		}
+		if(debug) System.out.print("Habian("+nCrucesGenerados+"),cruces en ("+i+")\n");
+		return nCrucesGenerados;
+	}
+	
+	
+	private void algoritmoGeneraSecciones(int nseccionesMinGrafo,int nseccionesMaxGrafo, int minCruces, int maxCruces){
+		int j=0;
+		int i=j,numeroRandom=0,ncrucesLineaActualMax=0,ncrucesEnTotal=0,ncrucesLineaActual=0,crucesDelnodo;	
+		 if(debug)System.out.println("Num Cruces a generar: " + nseccionesMaxGrafo);
+		//omp parallel shared(ncrucesEnTotal) private(i,ncrucesLineaActual,ncrucesLineaActualMax,numeroRandom)
+		{
+		while(ncrucesEnTotal<nseccionesMaxGrafo){
+			i=randInt(1,tablaGrafo.length-1);
+			if(debug)System.out.println("soy thread " + jomp.runtime.OMP.getThreadNum());
+			while((ncrucesEnTotal<nseccionesMinGrafo) && (tablaGrafo[i][0]==1)){//Generamos una i que no hayamos puesto a 1
+				i=randInt(1,tablaGrafo.length-1);
+			}
+			ncrucesLineaActual=cuentaCrucesDeUnNodo(i);
+			ncrucesLineaActualMax=randInt(minCruces,maxCruces);
+			int j=randInt(1,tablaGrafo.length-1);
+			while((ncrucesLineaActual < ncrucesLineaActualMax) && (ncrucesEnTotal<nseccionesMaxGrafo || ncrucesEnTotal<nseccionesMinGrafo)){
+				   j=randInt(1,tablaGrafo.length-1);
+				   if(debug)System.out.print("\nLinea i ("+i+") ");
+					while((ncrucesLineaActual<ncrucesLineaActualMax)&&(tablaGrafo[i][j]==1 || i==j || (cuentaCrucesDeUnNodo(j)> maxCruces))){//Generamos una j que no hayamos puesto a 1
+						j=randInt(1,tablaGrafo.length-1);
+						crucesDelnodo=cuentaCrucesDeUnNodo(j);
+					}
+					numeroRandom=randInt(0,1);
+					if(numeroRandom==1){
+						if(debug)System.out.print(" marco i("+i+") j("+j+") - i("+j+") j("+i+")");
+						//omp critical
+						{
+						if((crucesDelnodo+1)>=maxCruces) tablaGrafo[j][0]=1;
+						tablaGrafo[j][i]=1;
+						tablaGrafo[i][j]=1;
+						ncrucesLineaActual++;
+						ncrucesEnTotal+=2;
+						}
+					}
+						
+				}
+			}
+		}
+		//Limpieza de primera columna y fila usada para ver si visitado
+		//omp parallel for private(j)
+		for(j=0;j<tablaGrafo.length;j++){
+			tablaGrafo[0][j]=0;
+			tablaGrafo[j][0]=0;
+			System.out.print("test1\n");
+		}
+	}
+
+	public void pintaTabla(){
+		if(debug)System.out.println("\nTabla");
+		String preComa="";
+		int numeroSecciones=tablaGrafo.length;
+		for(int i=0;i<numeroSecciones;i++){
+			if(debug && i==0){
+				if(logitudNumero(numeroSecciones)>1) {System.out.print("    ");}else{System.out.print("   ");}
+				  for(int j=0;j<numeroSecciones;j++){
+					System.out.print(j);
+					if(j<numeroSecciones-1){
+					System.out.print("  ");
+					}
+				  }
+				  System.out.print("\n");				
+			}
+			 
+			  for(int j=0;j<numeroSecciones;j++){
+				if(j==0){
+					if(debug){
+					if(logitudNumero(numeroSecciones)>1) {
+						  if(logitudNumero(numeroSecciones)>logitudNumero(i)){
+							for(int n=0;n<(logitudNumero(numeroSecciones)-logitudNumero(j));n++){
+								System.out.print(" ");
+							}
+						  }
+						}
+				  preComa=i+" [";
+				  }else{preComa="[";}
+				}else{
+				  preComa=",";
+				}
+				if(j>0 && debug){
+				if(logitudNumero(numeroSecciones)>1) {
+					  if(logitudNumero(numeroSecciones)==logitudNumero(j)){
+						for(int n=0;n<=(logitudNumero(numeroSecciones)-logitudNumero(j));n++){
+							System.out.print(" ");
+						}
+					  }
+					  System.out.print(" ");
+					}
+				
+				}
+				
+				System.out.print(preComa+tablaGrafo[i][j]);			
+			  }
+			  System.out.print("]");
+			  if(i<numeroSecciones-1){
+			  System.out.print(",\n");
+			  }else{System.out.print("\n");}
+		  }
+		System.out.print("\n");
+	}
+	
+	private int logitudNumero(int n)
+	{
+		int l;
+		if(n>0){
+		n=Math.abs(n);
+		for (l=0;n>0;++l)
+			n/=10;
+		}else{
+			l=1;
+		}
+		return l;			
+	}
+	
+	public void insertaGrafoCQL(boolean recreaBD){
+	      try{
+	    	  principal.getCassandraSession().execute("USE Bd");
+	      }catch (InvalidQueryException e){
+	    	  principal.getCassandraSession().execute("CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
+	    	  principal.getCassandraSession().execute("USE Bd");
+	      }
+	      try{
+	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");
+	    	  if(recreaBD){
+	    		  principal.getCassandraSession().execute("DROP TABLE Bd.vertices");
+	    		  principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON vertices (vertA)");
+	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON vertices (vertB)");
+	      	  }
+	    	       }catch (InvalidQueryException e){
+	    	    	   System.out.println("No habia tabla vertices Recreando\n");
+	    	    	   principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    	    	   principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON Bd.vertices (vertA)");
+	 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON Bd.vertices (vertB)");
+	  }
+	      try{ 
+	    	  principal.getCassandraSession().execute("SELECT idseccion FROM Bd.caracteristicasVertices LIMIT 1");
+	    	    }catch (InvalidQueryException e){
+	    	    	System.out.println("No habia tabla caracteristicasVertices Recreando\n");
+	    	    	 principal.getCassandraSession().execute("CREATE TABLE Bd.caracteristicasVertices (idseccion text PRIMARY KEY, consumoMax int, coste float)");
+	    	    	 }	    
+	      
+	      PreparedStatement psExtremos = principal.getCassandraSession().prepare("INSERT INTO Bd.vertices (vertA,vertB,idseccion) VALUES (?, ?, ?)");
+		   PreparedStatement psCaracteristicas = principal.getCassandraSession().prepare("INSERT INTO Bd.caracteristicasVertices (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
+		   BatchStatement batch = new BatchStatement();
+		   int i,j,consumoMax;
+		   float coste;
+		   String idseccion;
+		   for(i=0;i<tablaGrafo.length;i++){
+			   for(j=i+1;j<tablaGrafo.length;j++){
+				   if(tablaGrafo[i][j]==1){
+				   if(debug)System.out.printf("Estoy en tabla[%d][%d]\n",i,j);
+				  consumoMax=randInt(1000,20000);
+				  coste=randfloat((float)0.1,(float)1.5);
+				  idseccion=String.valueOf(i)+"_"+String.valueOf(j);
+				  batch.add(psExtremos.bind(i,j,idseccion));		  
+				  batch.add(psCaracteristicas.bind(idseccion,consumoMax,coste));
+				  //batch.add(ps.bind(UUID.randomUUID(),j, i,consumoMax,coste));
+			//batch.add(ps.bind(UUID.randomUUID(),j, i,randInt(1000,20000),randfloat((float)0.1,(float)1.5)));
+				   }
+			}
+		   }
+		   principal.getCassandraSession().execute(batch);
+	}
+	
+
+	
+	private static float randfloat(float min, float max) {
+		     float randomNum=((max - min) * rand.nextFloat()) + min;
+		    return randomNum;
+	}
+	
+	public int numeroSecciones(){
+		return tablaGrafo.length;
+		
+	}
+	
+	public boolean compruebaSiConexion(int i){
+		boolean conexion=false;
+		int j=1;
+		if(i>0){
+		while(j<tablaGrafo.length && !conexion){
+			if(tablaGrafo[i][j]==1) conexion=true;
+			j++;
+		}}
+		return conexion;		
+	}
+
+	public void pintaBD(){
+		boolean vacia=false;
+		try{
+			principal.getCassandraSession().execute("USE Bd");
+			}catch (InvalidQueryException e){
+				vacia=true;
+				System.out.println("Vacia o no existe BD\n");
+				}
+		if(!vacia){
+			ResultSet results = principal.getCassandraSession().execute("SELECT * FROM vertices");
+			System.out.println(String.format("%-14s%-14s%-14s","idseccion", "vertA","vertB"));
+			//Iterator iter=results.iterator();
+			while(results.iterator().hasNext()){
+				Row row = results.iterator().next();
+				System.out.println(String.format("%s","---------------+---------------+---------------"));	   				
+				System.out.println(String.format("%-20s%-20s%-20s", row.getString("idseccion"),row.getInt("vertA"),row.getInt("vertB")));
+			}
+			System.out.println();
+			results = principal.getCassandraSession().execute("SELECT * FROM caracteristicasVertices");
+			System.out.println(String.format("%-14s%-14s%-5s","idseccion", "consumoMax","coste"));
+			//iter=results.iterator();
+			while(results.iterator().hasNext()){
+				Row row = (Row)results.iterator().next();
+				System.out.println(String.format("%s","---------------+---------------+---------------"));	   				
+				System.out.println(String.format("%-20s%-20s%-3.1f", row.getString("idseccion"),row.getInt("consumoMax"),  row.getFloat("coste")));
+			}
+			System.out.println();
+			}
+		}
+	/*
+	private void algoritmoGeneraSeccionesSingle(int nseccionesMinGrafo,int nseccionesMaxGrafo, int minCruces, int maxCruces){
+		int i=0,j=0,numeroRandom=0,ncrucesLineaActualMax=0,ncrucesEnTotal=0;
+		int ncrucesLineaActual=0;
+		int crucesDelnodo=0;
+		System.out.println("Num Cruces a generar: " + nseccionesMaxGrafo);
+		while(ncrucesEnTotal<nseccionesMaxGrafo || ncrucesEnTotal<nseccionesMinGrafo){
+			i=randInt(1,tablaGrafo.length-1);
+			while(tablaGrafo[i][0]==1 && ncrucesEnTotal<nseccionesMinGrafo){
+				i=randInt(1,tablaGrafo.length-1);
+			}
+			ncrucesLineaActual=cuentaCrucesDeUnNodo(i);
+			ncrucesLineaActualMax=randInt(minCruces,maxCruces);
+			j=randInt(1,tablaGrafo.length-1);
+			while((ncrucesLineaActual < ncrucesLineaActualMax) && (ncrucesEnTotal<nseccionesMaxGrafo || ncrucesEnTotal<nseccionesMinGrafo)){   
+				System.out.print("\nLinea i ("+i+") ");
+				crucesDelnodo=cuentaCrucesDeUnNodo(j);
+					while((ncrucesLineaActual<ncrucesLineaActualMax)&&(tablaGrafo[i][j]==1 || i==j || (crucesDelnodo> maxCruces))){//Generamos una j que no hayamos puesto a 1
+						j=randInt(1,tablaGrafo.length-1);
+						crucesDelnodo=cuentaCrucesDeUnNodo(j);
+					}
+					if(ncrucesLineaActual<=ncrucesLineaActualMax){
+					numeroRandom=randInt(0,1);
+					if(numeroRandom==1){
+						System.out.print(" marco i("+i+") j("+j+") - i("+j+") j("+i+")");
+						if((crucesDelnodo+1)>=maxCruces) tablaGrafo[j][0]=1;
+						tablaGrafo[j][i]=1;
+						tablaGrafo[i][j]=1;
+						ncrucesLineaActual++;
+						ncrucesEnTotal+=2;
+					}
+					}
+				}
+		}
+		//Limpieza de primera columna y fila usada para ver si visitado
+		for(j=0;j<tablaGrafo.length;j++){
+			tablaGrafo[0][j]=0;
+			tablaGrafo[j][0]=0;
+			System.out.print("test1\n");
+		}
+	}
+	*/
+}
+
