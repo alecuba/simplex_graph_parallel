@@ -17,44 +17,6 @@ public class RecorreGrafo {
 		this.principal=principal;
 	}
 	
-	private int[] consultarSiguientesSaltos(int idcliente,int idanterior,int idseccionnueva){
-			
-		//CaminoClienteN[id].id=idanterior;
-		//CaminoClienteN[id].siguiente=null; 
-		//principal.getCassandraSession().execute("CREATE TABLE vertices (vertA int, vertB int, idseccion text, PRIMARY KEY (vertA, vertB))");
-		System.out.print("Seccionactual("+idseccionnueva+")");
-		int[] resultados=null;
-		try{
-		      ResultSet resultsA = principal.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+idseccionnueva);
-		      ResultSet resultsB = principal.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+idseccionnueva);
-		      List<Row> rowsA = resultsA.all();
-		      List<Row> rowsB = resultsB.all();
-		      int pos=0;
-		      resultados =new int[rowsA.size()+rowsB.size()];
-	          for (Row row : rowsA) {
-	        	  		resultados[pos]=row.getInt("vertB");
-		   			 pos++;
-		   		}
-	          for (Row row : rowsB) {
-	        	  resultados[pos]=row.getInt("vertA");
-		   			 pos++;
-		   		}
-	          if(debug){
-			  System.out.print(" caminos Posibles:");
-			  for(int j=0;j<resultados.length;j++){
-				  System.out.print(resultados[j]+",");
-				  }
-	          }
-			  for(int j=0;j<resultados.length;j++){
-				  //consultarSiguientesSaltos(resultados[j]);
-			  }
-		      }catch (InvalidQueryException e){
-		    	  if(debug)System.out.printf("errorconsultaconsultarSiguientesSaltos\n");
-		    	  e.printStackTrace();
-		      }
-		System.out.println();
-		return resultados;
-	}
 	
 	public void generaCaminos(Camino caminoTemp){
 		 int idcamino=caminoTemp.idcamino;
@@ -86,6 +48,7 @@ public class RecorreGrafo {
 					  caminoAvisitar.idcamino=idcamino;
 					  caminoAvisitar.vertices.addAll(caminoTemp.vertices);
 					  caminoAvisitar.vertices.add(resultados[j]);
+		
 					  if(resultados[j]!=0){
 						  generaCaminos(caminoAvisitar);
 					  }else{
@@ -101,6 +64,10 @@ public class RecorreGrafo {
 		      }
 	}
 	
+	private void formateaResultados(){
+		
+	}
+	
    private boolean compruebaVerticeVisitado(Camino camino,int i) {
 	   boolean contiene=false;
 	   Iterator<Integer> itr=camino.vertices.iterator();
@@ -110,12 +77,10 @@ public class RecorreGrafo {
 	  return contiene;
 	}
 
-   private class Camino{
-	   public int idcliente;
-	   public int idcamino;
-	   public ArrayList<Integer> vertices=new ArrayList<Integer>();
-   }
-   
+	public ArrayList<Camino> getCaminos(){
+	return caminosFinal;
+	}
+	
    private ArrayList<Camino> caminosFinal=new ArrayList<Camino>();
    void sigueCamino(int idcamino,int camino, int vertActual){
 	   /*caminos[idcliente][idcamino][camino]=vertActual;
