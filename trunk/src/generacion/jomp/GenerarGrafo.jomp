@@ -1,7 +1,9 @@
 package generacion.jomp;
 
 import java.util.Random;
+
 import gui.Principal;
+
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
@@ -211,13 +213,13 @@ public class GenerarGrafo {
 	    	  principal.getCassandraSession().execute("SELECT idseccion FROM vertices LIMIT 1");
 	    	  if(recreaBD){
 	    		  principal.getCassandraSession().execute("DROP TABLE Bd.vertices");
-	    		  principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    		  principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion int PRIMARY KEY)");
 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON vertices (vertA)");
 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON vertices (vertB)");
 	      	  }
 	    	       }catch (InvalidQueryException e){
 	    	    	   System.out.println("No habia tabla vertices Recreando\n");
-	    	    	   principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion text PRIMARY KEY)");
+	    	    	   principal.getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion int PRIMARY KEY)");
 	    	    	   principal.getCassandraSession().execute("CREATE INDEX vertices_vertA ON Bd.vertices (vertA)");
 	 	    		  principal.getCassandraSession().execute("CREATE INDEX vertices_vertB ON Bd.vertices (vertB)");
 	  }
@@ -233,14 +235,14 @@ public class GenerarGrafo {
 		   BatchStatement batch = new BatchStatement();
 		   int i,j,consumoMax;
 		   float coste;
-		   String idseccion;
+		   int idseccion;
 		   for(i=0;i<tablaGrafo.length;i++){
 			   for(j=i+1;j<tablaGrafo.length;j++){
 				   if(tablaGrafo[i][j]==1){
 				   if(debug)System.out.printf("Estoy en tabla[%d][%d]\n",i,j);
 				  consumoMax=randInt(1000,20000);
 				  coste=randfloat((float)0.1,(float)1.5);
-				  idseccion=String.valueOf(i)+"_"+String.valueOf(j);
+				  idseccion=i;
 				  batch.add(psExtremos.bind(i,j,idseccion));		  
 				  batch.add(psCaracteristicas.bind(idseccion,consumoMax,coste));
 				  //batch.add(ps.bind(UUID.randomUUID(),j, i,consumoMax,coste));
@@ -289,7 +291,7 @@ public class GenerarGrafo {
 			while(results.iterator().hasNext()){
 				Row row = results.iterator().next();
 				System.out.println(String.format("%s","---------------+---------------+---------------"));	   				
-				System.out.println(String.format("%-20s%-20s%-20s", row.getString("idseccion"),row.getInt("vertA"),row.getInt("vertB")));
+				System.out.println(String.format("%-20s%-20s%-20s", row.getInt("idseccion"),row.getInt("vertA"),row.getInt("vertB")));
 			}
 			System.out.println();
 			results = principal.getCassandraSession().execute("SELECT * FROM caracteristicasVertices");
@@ -298,7 +300,7 @@ public class GenerarGrafo {
 			while(results.iterator().hasNext()){
 				Row row = (Row)results.iterator().next();
 				System.out.println(String.format("%s","---------------+---------------+---------------"));	   				
-				System.out.println(String.format("%-20s%-20s%-3.1f", row.getString("idseccion"),row.getInt("consumoMax"),  row.getFloat("coste")));
+				System.out.println(String.format("%-20s%-20s%-3.1f", row.getInt("idseccion"),row.getInt("consumoMax"),  row.getFloat("coste")));
 			}
 			System.out.println();
 			}

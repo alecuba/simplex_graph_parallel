@@ -14,8 +14,9 @@ package simplex;
  *
  *************************************************************************/
 
-public class Simplex {
+public class SimplexMinimizar {
     private static final double EPSILON = 1.0E-10;
+    private static final double EPSILON2 = 1.0E+10;
     private double[][] a;   // tableaux
     private int M;          // number of constraints
     private int N;          // number of original variables
@@ -23,15 +24,35 @@ public class Simplex {
     private int[] basis;    // basis[i] = basic variable corresponding to row i
                             // only needed to print out solution, not book
 
+    private int nArtificiales(int[] signo){
+    	//-1 <= , 0 = , 1>=
+    	int artificiales=0;
+    	for(int i=0;i<signo.length;i++){
+    		switch(signo[i]){
+    		case -1: artificiales++; break;
+    		case 0: artificiales++;break;
+    		case 1: artificiales+=2;break;
+    		}
+    	}
+    	return artificiales;
+    }
     // sets up the simplex tableaux
-    public Simplex(double[][] A, double[] b, double[] c) {
+    public SimplexMinimizar(double[][] A, double[] b, double[] c,int[] signo) {
         M = b.length;
         N = c.length;
-        a = new double[M+1][N+M+1];
+        int nArtificiales = nArtificiales(signo);
+        a = new double[M+1][N+nArtificiales+1];
         for (int i = 0; i < M; i++)
             for (int j = 0; j < N; j++)
                 a[i][j] = A[i][j];
-        for (int i = 0; i < M; i++) a[i][N+i] = 1.0;
+        //Primero las de holgura
+        int jHolgura=0;
+        for (int i = 0; i < M; i++)	if(signo[i]==-1){a[i][N+jHolgura] = 1.0;jHolgura++;}
+        //Luego las de super
+        for (int i = 0; i < M; i++)	if(signo[i]==1){a[i][N+jHolgura] = -1.0;jHolgura++;}
+        //Luego las de artificial
+        for (int i = 0; i < M; i++)	if(signo[i]==0 || signo[i]==1){a[i][N+jHolgura] = +1.0;jHolgura++;}
+
         for (int j = 0; j < N; j++) a[M][j]   = c[j];
         for (int i = 0; i < M; i++) a[i][M+N] = b[i];
 
@@ -228,8 +249,8 @@ public class Simplex {
     }
 
 
-    public static void test(double[][] A, double[] b, double[] c) {
-        Simplex lp = new Simplex(A, b, c);
+    public static void test(double[][] A, double[] b, double[] c,int[] signo) {
+        SimplexMinimizar lp = new SimplexMinimizar(A, b, c,signo);
         System.out.println("value = " + lp.value());
         double[] x = lp.primal();
         for (int i = 0; i < x.length; i++)
@@ -249,7 +270,7 @@ public class Simplex {
         };
         double[] c = { 1, 1, 1 };
         double[] b = { 5, 45, 27, 24, 4 };
-        test(A, b, c);
+        //test(A, b, c);
     }
 
     public static void testalex() {
@@ -260,7 +281,8 @@ public class Simplex {
         };
         double[] c = { 30, 25};
         double[] b = { 420, 140, 160 };
-        test(A, b, c);
+        int[] signo = {-1,0,1}; //-1 <= , 0 = , 1>=
+        test(A, b, c,signo);
     }
 
     // x0 = 12, x1 = 28, opt = 800
@@ -272,7 +294,7 @@ public class Simplex {
             {  4.0,  4.0 },
             { 35.0, 20.0 },
         };
-        test(A, b, c);
+        //test(A, b, c);
     }
 
     // unbounded
@@ -283,7 +305,7 @@ public class Simplex {
             { -2.0, -9.0,  1.0,  9.0 },
             {  1.0,  1.0, -1.0, -2.0 },
         };
-        test(A, b, c);
+        //test(A, b, c);
     }
 
     // degenerate - cycles if you choose most positive objective function coefficient
@@ -295,7 +317,8 @@ public class Simplex {
             { 0.5, -1.5, -0.5, 1.0 },
             { 1.0,  0.0,  0.0, 0.0 },
         };
-        test(A, b, c);
+        
+        //test(A, b, c);
     }
 
 
