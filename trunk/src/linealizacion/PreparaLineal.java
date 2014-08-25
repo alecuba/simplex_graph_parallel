@@ -15,20 +15,19 @@ public class PreparaLineal {
 
 		while(caminos.iterator().hasNext()){
 			Camino camino= caminos.iterator().next();
-			agregaSecciones(camino.idcamino,camino.vertices);
+			//agregaSecciones(camino.idcamino,camino.vertices);
 		}
 	}
 	
 	private void agregaSecciones(int idCamino, ArrayList<Integer>  vertices){
 		int pos=-1;
-		/*
 		for(int i=0;i<vertices.size();i++){
 			pos=buscaEnSecciones(vertices.get(i));
 			if(pos==-1){
 				pos=anadeSeccionNueva(vertices.get(i));
 			}
-			caminosecciones[idCamino][i]=pos;
-		}*/
+			//caminosecciones[idCamino][i]=pos;
+		}
 	}
 	
 	private int buscaEnSecciones(int i){
@@ -44,6 +43,9 @@ public class PreparaLineal {
 	}
 	
 	private int anadeSeccionNueva(int i){
+		
+		
+		
 		return i;
 		
 	}
