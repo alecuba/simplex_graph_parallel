@@ -1,26 +1,24 @@
 package generacion.jomp;
 import generacion.jomp.GenerarClientes;
 import generacion.jomp.GenerarGrafo;
-import gui.Principal;
+import comun.Gestor;
 
 import java.util.Random;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
 public class GenerarClientes {
 	private int[][] arrayClientes;
-	private Random rand = new Random();
+	private Random rand = new Random(System.currentTimeMillis());
     private boolean debug=false;
     private GenerarGrafo grafo;
-    private Principal principal;
+    private Gestor gestor;
     
-    public GenerarClientes(GenerarGrafo grafo,Principal principal){
+    public GenerarClientes(GenerarGrafo grafo,Gestor gestor){
     	this.grafo=grafo;
-    	this.principal=principal;
+    	this.gestor=gestor;
     }
     
 	private int randInt(int min, int max) {
@@ -133,48 +131,27 @@ public class GenerarClientes {
 
 	public void insertaGrafoCQL(boolean recreaBD){
 		try{
-	    	  principal.getCassandraSession().execute("USE BD");
+	    	  gestor.getCassandraSession().execute("USE BD");
 	      }catch (InvalidQueryException e){
-	    	  principal.getCassandraSession().execute("CREATE KEYSPACE BD WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
-	    	  principal.getCassandraSession().execute("USE BD");
+	    	  gestor.getCassandraSession().execute("CREATE KEYSPACE BD WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
+	    	  gestor.getCassandraSession().execute("USE BD");
 	      }
 		
 		try{
-			principal.getCassandraSession().execute("SELECT id FROM clientes LIMIT 1");
+			gestor.getCassandraSession().execute("SELECT id FROM clientes LIMIT 1");
 	    	  if(recreaBD){
-	    		  principal.getCassandraSession().execute("DROP TABLE clientes");
-	    		  principal.getCassandraSession().execute("CREATE TABLE clientes (id int PRIMARY KEY,idseccion int, consumoActual int)"); 	  
+	    		  gestor.getCassandraSession().execute("DROP TABLE clientes");
+	    		  gestor.getCassandraSession().execute("CREATE TABLE clientes (id int PRIMARY KEY,idseccion int, consumoActual int)"); 	  
 	  		}
 	      }catch (InvalidQueryException e){
-	    	  principal.getCassandraSession().execute("CREATE TABLE clientes (id int PRIMARY KEY, idseccion int,consumoActual int)"); 	  
+	    	  gestor.getCassandraSession().execute("CREATE TABLE clientes (id int PRIMARY KEY, idseccion int,consumoActual int)"); 	  
 	      }
 		
-		   PreparedStatement ps = principal.getCassandraSession().prepare("INSERT INTO clientes (id, idseccion,consumoActual) VALUES (?, ?, ?)");
+		   PreparedStatement ps = gestor.getCassandraSession().prepare("INSERT INTO clientes (id, idseccion,consumoActual) VALUES (?, ?, ?)");
 		   BatchStatement batch = new BatchStatement();
 		   for(int i=0;i<arrayClientes.length;i++){
 			batch.add(ps.bind(i,arrayClientes[i][1],arrayClientes[i][0]));
 		   }
-		   principal.getCassandraSession().execute(batch);
+		   gestor.getCassandraSession().execute(batch);
 	}
-	
-	public void pintaBD(){
-		boolean vacia=false;
-	      try{
-	    	  principal.getCassandraSession().execute("USE BD");      
-	      }catch (InvalidQueryException e){
-	    	  vacia=true;
-	    	  System.out.println("Vacia o no existe BD\n");
-	      }
-	      if(!vacia){
-	    	  ResultSet results = principal.getCassandraSession().execute("SELECT * FROM clientes");
-	          System.out.println(String.format("%-12s%-12s%-12s","id","idseccion", "consumoActual"));
-	          while(results.iterator().hasNext()){
-	        	  Row row = results.iterator().next();
-	   			System.out.println(String.format("%s","--------+---------+-------------------"));
-	   				
-	   		   System.out.println(String.format("%-20d%-20d%-20d", row.getInt("id"),row.getInt("idseccion"),row.getInt("consumoActual")));
-	   		}
-			System.out.println();
-	      }
-	     }
 }
