@@ -107,8 +107,7 @@ public class Gestor{
 				System.out.println("1\n");
 				System.out.println("Numero vertices:"
 						+ recorre.consultaNumeroVertices());
-				Caminos caminos = new Caminos();
-				recorre.encuentraCaminosTodosClientes(caminos);
+				Caminos caminos =recorre.encuentraCaminosTodosClientes();
 				caminos.pintaCaminosGenerados();
 				// }
 			}
@@ -365,11 +364,12 @@ public class Gestor{
 			this.autoinserta = insertar;
 		}
 
-		public Cluster getCassandraCluster() {
+		private Cluster getCassandraCluster() {
 			return cluster;
 		}
 
 		public Session getCassandraSession() {
+			if(session==null) esperaConexionCassandra();
 			return session;
 		}
 		
