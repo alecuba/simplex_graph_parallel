@@ -2,11 +2,14 @@ package gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+
 import javax.swing.AbstractButton;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
@@ -15,7 +18,9 @@ import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+
 import java.awt.BorderLayout;
+
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -23,6 +28,7 @@ import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.text.DefaultCaret;
+
 import comun.Gestor;
 
 public class Principal {
@@ -36,6 +42,7 @@ public class Principal {
 	private JTextField txtMaxclientes;
 	private JTextField txtMinconsumo;
 	private JTextField txtMaxconsumo;
+	private JTextField txtThreads;
 	private JLabel lblMemoriaUtilizada = new JLabel("0 MB 0%");
 	private Gestor gestor=new Gestor();
 	private JButton btnGenerarsecciones;
@@ -281,12 +288,50 @@ public class Principal {
 
 		JLabel lblMaxconsumo = new JLabel("MaxConsumo:");
 		horizontalBox_7.add(lblMaxconsumo);
-
+				
 		txtMaxconsumo = new JTextField();
 		txtMaxconsumo.setText("3500");
 		txtMaxconsumo.setColumns(10);
 		horizontalBox_7.add(txtMaxconsumo);
+		
+		Box horizontalBox_8 = Box.createHorizontalBox();
+		verticalBox_1.add(horizontalBox_8);
+		JLabel lblThreads = new JLabel("Threads:");
+		horizontalBox_8.add(lblThreads);
+		txtThreads = new JTextField();
+		txtThreads.setText(Integer.toString(jomp.runtime.OMP.getMaxThreads()));
+		txtThreads.addKeyListener(new KeyListener() {
 
+		    @Override
+		    public void keyTyped(KeyEvent e) {
+		        char c = e.getKeyChar();
+		        if (!((c >= '1') && (c <= (char)(((int)'0')+Runtime.getRuntime().availableProcessors())) ||
+		           (c == KeyEvent.VK_BACK_SPACE) ||
+		           (c == KeyEvent.VK_DELETE))) {
+		        	txtThreads.setText(Integer.toString(Runtime.getRuntime().availableProcessors()));
+		          e.consume();
+		        }else{
+		        	if(txtThreads.getText().length()>=1){txtThreads.setText("");
+		        	}
+		        }
+		      }
+
+		    @Override
+		    public void keyReleased(KeyEvent arg0) {
+		        // TODO Auto-generated method stub
+		    	try{
+			    	jomp.runtime.OMP.setNumThreads(Integer.parseInt(Principal.this.txtThreads.getText()));
+			    	System.out.println("Ha cambiado el numero de threads a "+jomp.runtime.OMP.getMaxThreads());
+		    	} catch (NumberFormatException e){
+		    	}
+		    }
+
+		    @Override
+	        public void keyPressed(KeyEvent e) {
+	        };
+		});
+		horizontalBox_8.add(txtThreads);
+		
 		Box verticalBox_2 = Box.createVerticalBox();
 		panel.add(verticalBox_2);
 
