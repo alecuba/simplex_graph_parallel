@@ -6,17 +6,16 @@ import java.util.List;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 
-import busqueda.Camino;
 
 public class PreparaLineal {
 	private ArrayList<ArrayList<Float>> seccionesTemp=new ArrayList<ArrayList<Float>>();
 	
-	public PreparaLineal(ArrayList<Camino> caminos){
+	public PreparaLineal(){
 
-		while(caminos.iterator().hasNext()){
-			Camino camino= caminos.iterator().next();
+		//while(caminos.iterator().hasNext()){
+			//Camino camino= caminos.iterator().next();
 			//agregaSecciones(camino.idcamino,camino.vertices);
-		}
+		//}
 	}
 	
 	private void agregaSecciones(int idCamino, ArrayList<Integer>  vertices){

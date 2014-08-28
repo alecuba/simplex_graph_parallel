@@ -1,91 +1,154 @@
 package busqueda.jomp;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import jomp.compiler.Jomp;
 import comun.Gestor;
-import busqueda.Camino;
-import busqueda.Seccion;
-import busqueda.Caminos;
+import busqueda.jomp.Caminos;
+import busqueda.jomp.BubbleSortInt2d;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
 public class RecorreGrafo {
 	private Gestor gestor;
-	private Caminos caminos = new Caminos();
+	private Caminos caminos;
 	
-	public RecorreGrafo(Gestor gestor) {
+	
+	public RecorreGrafo(Gestor gestor,Caminos caminos) {
+		this.caminos=caminos;
 		this.gestor = gestor;
 	}
 	
 	public void generaCaminos(){
-		Camino ultimoCamino;
+		boolean arrancado=false;
+		int i=0;
+		int posUltimoCamino;
 		while(!caminos.isFinalizados()){
-			//omp parallel private(ultimoCamino)
+			//omp parallel shared(caminos,gestor) private(i,posUltimoCamino)
 			{
-				//omp critical
+			    //omp critical
 				{
-				ultimoCamino=caminos.getUltimoCaminoNoFinalizadoNiVisitando();
+					posUltimoCamino=caminos.getUltimoCaminoNoFinalizadoNiVisitando();
 				}
-				if(ultimoCamino!=null){
-				ResultSet resultsA=null;
-				ResultSet resultsB=null;
-			    try {
-				resultsA = gestor.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+ ultimoCamino.getUltimoVerticeSeccion());
-				resultsB = gestor.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+ ultimoCamino.getUltimoVerticeSeccion());
-			    } catch (InvalidQueryException e) {
-					if (debug)
-						System.out.printf("errorconsultaconsultarSiguientesSaltos\n");
-					e.printStackTrace();
+				if(posUltimoCamino!=-1){
+						int ultimoVertice = caminos.getUltimoVerticeDelCamino(posUltimoCamino);
+						if(ultimoVertice!=-1){
+								try {
+									ResultSet resultsA = gestor.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+ultimoVertice);
+									ResultSet resultsB = gestor.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+ultimoVertice);
+									List rowsA = (List)resultsA.all();
+									List rowsB = (List)resultsB.all();
+									int[][] resultados = new int[rowsA.size() + rowsB.size()][2];
+									for(i=0;i<rowsA.size();i++){
+										resultados[i][0] = ((Row) rowsA.get(i)).getInt("vertB");
+										resultados[i][1] = ((Row) rowsA.get(i)).getInt("idseccion");
+									}
+									for(i=i;i<rowsA.size()+rowsB.size();i++){
+										resultados[i][1] = ((Row) rowsB.get(i-rowsA.size())).getInt("idseccion");
+										resultados[i][0] = ((Row) rowsB.get(i-rowsA.size())).getInt("vertA");
+									}
+									BubbleSortInt2d sort2d = new BubbleSortInt2d();
+									resultados=sort2d.sort(resultados);
+									for (i = 0; i < resultados.length; i++) {				
+										if(!caminos.isVerticeVisitadoDelCamino(posUltimoCamino,resultados[i][0])){
+											//omp critical
+											{
+											 caminos.agregaNuevoCaminoCopiando(posUltimoCamino, resultados[i][1], resultados[i][0]);
+											}
+										}
+									}
+							    } catch (InvalidQueryException e) {
+									if (debug)
+										System.out.println("Error al obtener ultima seccion");
+									e.printStackTrace();
+								}
+						    //omp critical
+							{
+						    caminos.borraCamino(posUltimoCamino);
+							}
+						}
+						if (posUltimoCamino==0 && arrancado){posUltimoCamino=-1;}else{arrancado=true;}
+						/*//omp barrier*/
 				}
-			    if(resultsA!=null && resultsB!=null){
-				List rowsA = (List)resultsA.all();
-				List rowsB = (List)resultsB.all();
-				int pos = 0;
-				int[][] resultados = new int[rowsA.size() + rowsB.size()][2];
-				for(int i=0;i<rowsA.size();i++){
-					resultados[pos][0] = ((Row) rowsA.get(i)).getInt("vertB");
-					resultados[pos][1] = ((Row) rowsA.get(i)).getInt("idseccion");
-					pos++;
-				}
-				for(int i=0;i<rowsB.size();i++){
-					resultados[pos][1] = ((Row) rowsB.get(i)).getInt("idseccion");
-					resultados[pos][0] = ((Row) rowsB.get(i)).getInt("vertA");
-					pos++;
-				}
-				int j;
-				Camino caminoTemp;
-				Seccion seccionTemp;
-				boolean visitado;
-				for (j = 0; j < resultados.length; j++) {
-					visitado=ultimoCamino.isSecionVisitada(resultados[j][0]);
-					if(!visitado){
-					caminoTemp = new Camino();
-					caminoTemp.idcliente=ultimoCamino.idcliente;
-					seccionTemp = new Seccion();
-					seccionTemp.idSeccion=resultados[j][1];
-					seccionTemp.vertA=ultimoCamino.getUltimoVerticeSeccion();
-					seccionTemp.vertB=resultados[j][0];
-					caminoTemp.secciones.addAll(ultimoCamino.secciones);
-					caminoTemp.secciones.add(seccionTemp);
-					//omp critical
-					{
-					if(seccionTemp.vertB==0){
-					caminos.agregaNuevoCamino(caminoTemp,true);
-					}else{
-						caminos.agregaNuevoCamino(caminoTemp,false);
-					}
-					}
-				}
-				}
-				}
-			  //omp critical
-				{
-			    caminos.borraCamino(ultimoCamino);
-				}
-				}
-				//omp barrier
 			}
 		}
+	}
+
+	public Caminos encuentraCaminosTodosClientes() {
+		if (debug)
+			System.out.printf("encuentraCaminosTodosClientes\n");
+		try {
+			gestor.getCassandraSession().execute("USE Bd");
+		} catch (InvalidQueryException e) {
+			if (debug)
+				System.out.printf("errorbd\n");
+		}
+		try {
+			ResultSet clientes = gestor.getCassandraSession().execute(
+					"SELECT * FROM Bd.clientes");
+			List rows = (List)clientes.all();
+			long start = System.currentTimeMillis();
+			for (int i=0;i<rows.size();i++) {
+				System.out.print("Buscando camino para el cliente("
+						+ ((Row)rows.get(i)).getInt("id") + ") conectado a la Seccion("
+						+ ((Row)rows.get(i)).getInt("idseccion") + ")\n");
+				caminos.agregaNuevoCamino(((Row)rows.get(i)).getInt("id"),-1,-1,((Row)rows.get(i)).getInt("idseccion"));
+				generaCaminos();
+			}
+			long elapsedTimeMillis = System.currentTimeMillis()-start;
+			System.out.println("\nZona paralela:"+jomp.runtime.OMP.inParallel()+" tiempo("+(elapsedTimeMillis/1000F)+")");
+			// limpiaCaminosSinSalida();
+		} catch (InvalidQueryException e) {
+			if (debug)
+				System.out.printf("errorconsulta\n");
+		}
+		System.out.println("Terminado encuentraCaminosTodosClientes");
+		return caminos;
+	}
+
+	private boolean debug = false;
+
+	public void setDebug(boolean debug) {
+		this.debug = debug;
+	}
+	
+	public double consultaNumeroVertices() {
+		double nVertices = 0;
+		if (debug)
+			System.out.printf("consultaNumeroVertices:");
+		try {
+			gestor.getCassandraSession().execute("USE Bd");
+		} catch (InvalidQueryException e) {
+			if (debug)
+				System.out.printf("errorbd\n");
+		}
+		try {
+			nVertices = gestor.getCassandraSession()
+					.execute("SELECT COUNT(1) FROM Bd.vertices;").all().get(0)
+					.getLong("count");
+		} catch (InvalidQueryException e) {
+			if (debug)
+				System.out.printf("errorconsulta\n");
+		}
+		if (debug)
+			System.out.printf(nVertices + "\n");
+		return nVertices;
+	}
+	
+
+	void sigueCamino(int idcamino, int camino, int vertActual) {
+		/*
+		 * caminos[idcliente][idcamino][camino]=vertActual; camino++; Select
+		 * vertA,vertB where A,B = vertActual for each row
+		 * if(!compruebaVerticeVisitado
+		 * (caminos[idcliente][idcamino],row.getInt(vertA)) {
+		 * sigueCamino(idcliente,idcamino,camino,row.getInt(vert)); idcamino++;
+		 * 
+		 * }
+		 */
+
 	}
 
 	/*
@@ -165,98 +228,4 @@ public class RecorreGrafo {
 
 	}
 	*/
-
-	
-	
-
-	void sigueCamino(int idcamino, int camino, int vertActual) {
-		/*
-		 * caminos[idcliente][idcamino][camino]=vertActual; camino++; Select
-		 * vertA,vertB where A,B = vertActual for each row
-		 * if(!compruebaVerticeVisitado
-		 * (caminos[idcliente][idcamino],row.getInt(vertA)) {
-		 * sigueCamino(idcliente,idcamino,camino,row.getInt(vert)); idcamino++;
-		 * 
-		 * }
-		 */
-
-	}
-
-	public double consultaNumeroVertices() {
-		double nVertices = 0;
-		if (debug)
-			System.out.printf("consultaNumeroVertices:");
-		try {
-			gestor.getCassandraSession().execute("USE Bd");
-		} catch (InvalidQueryException e) {
-			if (debug)
-				System.out.printf("errorbd\n");
-		}
-		try {
-			nVertices = gestor.getCassandraSession()
-					.execute("SELECT COUNT(1) FROM Bd.vertices;").all().get(0)
-					.getLong("count");
-		} catch (InvalidQueryException e) {
-			if (debug)
-				System.out.printf("errorconsulta\n");
-		}
-		if (debug)
-			System.out.printf(nVertices + "\n");
-		return nVertices;
-	}
-
-
-	public Caminos encuentraCaminosTodosClientes() {
-		if (debug)
-			System.out.printf("encuentraCaminosTodosClientes\n");
-		try {
-			gestor.getCassandraSession().execute("USE Bd");
-		} catch (InvalidQueryException e) {
-			if (debug)
-				System.out.printf("errorbd\n");
-		}
-		try {
-			ResultSet clientes = gestor.getCassandraSession().execute(
-					"SELECT * FROM Bd.clientes");
-			List rows = (List)clientes.all();
-			long start = System.currentTimeMillis();
-			for (int i=0;i<rows.size();i++) {
-				System.out.print("Buscando camino para el cliente("
-						+ ((Row)rows.get(i)).getInt("id") + ") con conexion("
-						+ ((Row)rows.get(i)).getInt("idseccion") + "),");
-				Camino caminoTemp = new Camino();
-				caminoTemp.idcliente = ((Row)rows.get(i)).getInt("id");
-				caminoTemp.idcamino = 0;
-				Seccion seccion = new Seccion();
-				seccion.idSeccion=-1;
-				seccion.vertA=-1;
-				seccion.vertB=((Row)rows.get(i)).getInt("idseccion");
-				caminoTemp.secciones.add(seccion);
-				caminos.agregaNuevoCamino(caminoTemp,false);
-				//ArrayListEnteros vertices = new ArrayListEnteros();
-				//vertices.add(((Row)rows.get(i)).getInt("idseccion"));
-				
-				
-				
-				
-				generaCaminos();
-				//rellenaResultado();
-				// consultarSiguientesSaltos(row.getInt("id"),row.getInt("idseccion"));
-			}
-			long elapsedTimeMillis = System.currentTimeMillis()-start;
-			System.out.println("Zona paralela:"+jomp.runtime.OMP.inParallel()+" tiempo("+(elapsedTimeMillis/1000F)+")");
-			// limpiaCaminosSinSalida();
-		} catch (InvalidQueryException e) {
-			if (debug)
-				System.out.printf("errorconsulta\n");
-		}
-		System.out.println("Terminado encuentraCaminosTodosClientes");
-		return caminos;
-	}
-
-	private boolean debug = false;
-
-	public void setDebug(boolean debug) {
-		this.debug = debug;
-	}
 }

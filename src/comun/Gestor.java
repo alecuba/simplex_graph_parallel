@@ -1,13 +1,16 @@
 package comun;
 import generacion.jomp.GenerarClientes;
 import generacion.jomp.GenerarGrafo;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.RejectedExecutionException;
-import busqueda.Caminos;
+import busqueda.jomp.Caminos;
+import busqueda.jomp.Caminos.Camino;
 import busqueda.jomp.RecorreGrafo;
+import busqueda.jomp.Secciones;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
@@ -102,12 +105,15 @@ public class Gestor{
 				// clientes.conectarClientes(grafo.numeroSecciones());
 				// clientes.insertaGrafoCQL(true);
 				// clientes.pintaBD();
-				RecorreGrafo recorre = new RecorreGrafo(this);
+				Secciones secciones=new Secciones();
+				Caminos caminos = new Caminos(secciones);
+				RecorreGrafo recorre = new RecorreGrafo(this,caminos);
 				recorre.setDebug(true);
 				System.out.println("1\n");
 				System.out.println("Numero vertices:"
 						+ recorre.consultaNumeroVertices());
-				Caminos caminos =recorre.encuentraCaminosTodosClientes();
+				
+				recorre.encuentraCaminosTodosClientes();
 				caminos.pintaCaminosGenerados();
 				// }
 			}
@@ -256,10 +262,10 @@ public class Gestor{
 									"CREATE TABLE clientes (id int PRIMARY KEY, idseccion int,consumoActual int)");
 				}
 
-				int[][] vertices = { { 0, 0, 2 }, { 1, 1, 6 }, { 2, 2, 6 },
-						{ 3, 3, 6 }, { 4, 4, 6 }, { 5, 5, 6 }, { 6, 0, 6 },
-						{ 7, 5, 4 }, { 8, 3, 4 }, { 9, 1, 4 }, { 10, 4, 2 },
-						{ 11, 1, 3 }, { 12, 3, 5 } };
+				int[][] vertices = { { 0, 0, 2 }, { 1, 0, 6 }, { 2, 1, 3 },
+						{ 3, 1, 4 }, { 4, 1, 6 }, { 5, 2, 4 }, { 6, 2, 6 },
+						{ 7, 3, 4 }, { 8, 3, 5 }, { 9, 3, 6 }, { 10, 4, 5 },
+						{ 11, 4, 6 }, { 12, 5, 6 } };
 				float[][] verticesCaracteristicas = { { 0, 13438, (float) 0.5 },
 						{ 1, 15040, (float) 0.7 }, { 2, 11273, (float) 0.9 },
 						{ 3, 16086, (float) 1.5 }, { 4, 14202, (float) 1.2 },
