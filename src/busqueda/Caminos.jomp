@@ -35,6 +35,7 @@ public class Caminos {
 			Camino caminoTemp = (Camino)itrCamino.next();
 			if(((int)finalizadoOvisitando.get(pos))!=-2){
 			Iterator itrseccion = caminoTemp.idsecciones.iterator();
+			itrseccion.next();
 			while(itrseccion.hasNext()){
 				if(camino.length()!=0) camino=camino+"-";
 				camino=camino+secciones.getidSeccion((int)itrseccion.next());
@@ -105,7 +106,7 @@ public class Caminos {
 				}else if(i>0){
 								Camino caminoi = (Camino)caminosFinal.get(i);
 								Camino caminoi_1 = (Camino)caminosFinal.get(i-1);
-								if(caminoi!=null && caminoi_1!=null &&caminoi.idcamino!=caminoi_1.idcamino){
+								if(caminoi!=null && caminoi_1!=null &&caminoi.idcliente!=caminoi_1.idcliente){
 									i=0;
 								} else {
 										i--;

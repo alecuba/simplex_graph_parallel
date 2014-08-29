@@ -347,12 +347,12 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				gestionBotones(false);
 				//Thread queryThread = new Thread() {
-				  //    public void run() {
+				 //    public void run() {
 				    	  Principal.this.gestor.generarSecciones(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2);
 				    	  gestionBotones(true);
-				    //  }
-				    //};
-				    //queryThread.start();
+				   //   }
+				   // };
+				   //queryThread.start();
 							
 			}
 		});
@@ -381,9 +381,9 @@ public class Principal {
 				//      public void run() {
 				Principal.this.gestor.generarSeccionesYClientes(Integer.parseInt(txtMinsecciones.getText()), Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2,Integer.parseInt(txtMinclientes.getText()), Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
 				gestionBotones(true);
-				//      }
-				//     };
-				//    queryThread.start();
+				  //    }
+				  //   };
+				  //  queryThread.start();
 			}
 		});
 

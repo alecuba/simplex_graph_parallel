@@ -45,7 +45,7 @@ public class RecorreGrafo {
 							}
 							BubbleSortInt2d sort2d = new BubbleSortInt2d();
 							resultados=sort2d.sort(resultados);
-							/*//omp parallel for private(i)*/
+							//omp parallel for private(i)
 							for (i = 0; i < resultados.length; i++) {				
 								if(!caminos.isVerticeVisitadoDelCamino(posUltimoCamino,resultados[i][0])){
 									 caminos.agregaNuevoCaminoCopiando(posUltimoCamino, resultados[i][1], resultados[i][0]);

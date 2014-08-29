@@ -37,6 +37,7 @@ public class Caminos {
 			Camino caminoTemp = (Camino)itrCamino.next();
 			if(((int)finalizadoOvisitando.get(pos))!=-2){
 			Iterator itrseccion = caminoTemp.idsecciones.iterator();
+			itrseccion.next();
 			while(itrseccion.hasNext()){
 				if(camino.length()!=0) camino=camino+"-";
 				camino=camino+secciones.getidSeccion((int)itrseccion.next());
