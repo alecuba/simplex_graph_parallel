@@ -392,13 +392,13 @@ public class Principal {
 		btnEncuentraCaminos.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				gestionBotones(false);
-				Thread queryThread = new Thread() {
-				      public void run() {
+				//Thread queryThread = new Thread() {
+				 //     public void run() {
 				Principal.this.gestor.encuentraCaminos(Integer.parseInt(txtMinsecciones.getText()), Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2,Integer.parseInt(txtMinclientes.getText()), Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));;						
 				gestionBotones(true);
-				      }
-				    };
-				    queryThread.start();	
+				//      }
+				 //   };
+				  //  queryThread.start();	
 			}
 		});
 
