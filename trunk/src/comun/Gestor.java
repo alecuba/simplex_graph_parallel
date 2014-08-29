@@ -1,4 +1,5 @@
 package comun;
+
 import generacion.GenerarClientes;
 import generacion.GenerarGrafo;
 
@@ -11,7 +12,6 @@ import java.util.concurrent.RejectedExecutionException;
 import busqueda.Caminos;
 import busqueda.RecorreGrafo;
 import busqueda.Secciones;
-import busqueda.Caminos.Camino;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Cluster;
@@ -23,6 +23,7 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 
 public class Gestor{
 		private Cluster cluster = null;
@@ -111,8 +112,9 @@ public class Gestor{
 						Caminos caminos = new Caminos(secciones);
 						RecorreGrafo recorre = new RecorreGrafo(this,caminos);
 						recorre.setDebug(true);
-						recorre.encuentraCaminosTodosClientes();
-						caminos.pintaCaminosGenerados();							
+						long tiempo=recorre.encuentraCaminosTodosClientes();
+						caminos.pintaCaminosGenerados();					
+						System.out.println("\nNumero Threads utilizados:"+jomp.runtime.OMP.getMaxThreads()+" tiempo("+(tiempo/1000F)+")");
 						}else{
 							if(!generado) System.out.println("No se pudo encontrar caminos porque no se genero");
 						}
@@ -425,7 +427,11 @@ public class Gestor{
 		}
 
 		public Session getCassandraSession() {
-			if(session==null) esperaConexionCassandra();
+			if(session==null){
+				esperaConexionCassandra();
+			} else{
+			return session;
+			}
 			return session;
 		}
 		
@@ -437,6 +443,12 @@ public class Gestor{
 			encendido = false;
 			if (enciendeProcesoCassandra()) {
 				while (!encendido && tiempo < (timeout / espera)) {
+					try {
+						Thread.sleep(espera * 1000);
+					} catch (InterruptedException e3) {
+						// TODO Auto-generated catch block
+						e3.printStackTrace();
+					}
 					try {
 						cluster = Cluster.builder().addContactPoint("127.0.0.1")
 								.build();
@@ -453,7 +465,7 @@ public class Gestor{
 							}
 						}
 						session = cluster.connect();
-
+						
 						encendido = true;
 					} catch (NoHostAvailableException e) {
 						try {
@@ -475,6 +487,8 @@ public class Gestor{
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
+					} catch (OutOfMemoryError e){
+						encendido = false;
 					}
 				}
 			}

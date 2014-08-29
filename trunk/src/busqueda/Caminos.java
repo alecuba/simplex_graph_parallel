@@ -102,10 +102,10 @@ public class Caminos {
 		if(finalizadoOvisitando.size()>0){
 			i=finalizadoOvisitando.size()-1;
 			while(!encontradoUno && i>=0){
-				if((int)finalizadoOvisitando.get(i)==0){
+				if(finalizadoOvisitando.get(i)!=null&&(int)finalizadoOvisitando.get(i)==0){
 					encontradoUno=true;
 					finalizadoOvisitando.set(i, (int)1);
-				}else if(i>0){
+				}else if(i>0&&i<caminosFinal.size()){
 								Camino caminoi = (Camino)caminosFinal.get(i);
 								Camino caminoi_1 = (Camino)caminosFinal.get(i-1);
 								if(caminoi!=null && caminoi_1!=null &&caminoi.idcliente!=caminoi_1.idcliente){
@@ -141,8 +141,10 @@ public class Caminos {
 	}
 	
 	public int getUltimoVerticeDelCamino(int id){
+		if(id<caminosFinal.size()){
 		int seccionUltimaVertA= secciones.getVertASeccionID((int)((Camino)caminosFinal.get(id)).idsecciones.get(((Camino)caminosFinal.get(id)).idsecciones.size()-1));
 	    int seccionUltimaVertB= secciones.getVertBSeccionID((int)((Camino)caminosFinal.get(id)).idsecciones.get(((Camino)caminosFinal.get(id)).idsecciones.size()-1));
+	    if(seccionUltimaVertA!=seccionUltimaVertB){
 		if(((Camino)caminosFinal.get(id)).idsecciones.size()>1){	    
 	   int seccionPenUltimaVertB= secciones.getVertBSeccionID((int)((Camino)caminosFinal.get(id)).idsecciones.get(((Camino)caminosFinal.get(id)).idsecciones.size()-2));
 	    if(seccionUltimaVertA == seccionPenUltimaVertB) return seccionUltimaVertB ;
@@ -150,6 +152,8 @@ public class Caminos {
 		} else{
 		return  seccionUltimaVertB;
 		}
+		}else{return -1;}
+		}else{return -1;}
 	}
 	
 	public int getUltimoIdClienteDeLaSeccion(int id){
@@ -168,14 +172,11 @@ public class Caminos {
 		return visitada;
 	}
 	
-	
-	
-	
 	public boolean isFinalizados(){
 		boolean finalizados=true;
 		int i=0;
 		 while(finalizados&&i<finalizadoOvisitando.size()){
-			if(((int)finalizadoOvisitando.get(i))!=-1&&((int)finalizadoOvisitando.get(i))!=-2){
+			if(finalizadoOvisitando.get(i)!=null&&((int)finalizadoOvisitando.get(i))!=-1&&((int)finalizadoOvisitando.get(i))!=-2){
 				finalizados=false;
 			}
 			i++;

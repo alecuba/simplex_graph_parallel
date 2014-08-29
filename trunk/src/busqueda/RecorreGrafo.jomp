@@ -4,6 +4,8 @@ import java.util.List;
 import comun.Gestor;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
 public class RecorreGrafo {
@@ -20,17 +22,21 @@ public class RecorreGrafo {
 		boolean arrancado=false;
 		int i=0;
 		int posUltimoCamino;
+		long iteraciones=0;
 		ResultSet resultsA;
 		ResultSet resultsB;
 		int ultimoVertice;
 		while(!caminos.isFinalizados()){
+			iteraciones++;
 			posUltimoCamino=caminos.getUltimoCaminoNoFinalizadoNiVisitando();
 			if(posUltimoCamino!=-1){
 				ultimoVertice = caminos.getUltimoVerticeDelCamino(posUltimoCamino);
 				if(ultimoVertice!=-1){
 						try {
-							resultsA = gestor.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+ultimoVertice);
-							resultsB = gestor.getCassandraSession().execute("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+ultimoVertice);
+							 Statement consulta1 = new SimpleStatement("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+ultimoVertice);
+							 Statement consulta2 = new SimpleStatement("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+ultimoVertice);
+							resultsA = gestor.getCassandraSession().execute(consulta1);
+							resultsB = gestor.getCassandraSession().execute(consulta2);
 							List rowsA = (List)resultsA.all();
 							List rowsB = (List)resultsB.all();
 							resultados = new int[rowsA.size() + rowsB.size()][2];
@@ -44,8 +50,8 @@ public class RecorreGrafo {
 							}
 							BubbleSortInt2d sort2d = new BubbleSortInt2d();
 							resultados=sort2d.sort(resultados);
-							/*//omp parallel for private(i)*/
-							for (i = 0; i < resultados.length; i++) {				
+							//omp parallel for
+							for (i = 0; i < resultados.length; i++) {
 								if(!caminos.isVerticeVisitadoDelCamino(posUltimoCamino,resultados[i][0])){
 									 caminos.agregaNuevoCaminoCopiando(posUltimoCamino, resultados[i][1], resultados[i][0]);
 								}
@@ -66,7 +72,8 @@ public class RecorreGrafo {
 		}
 	}
 	
-	public Caminos encuentraCaminosTodosClientes() {
+	public long encuentraCaminosTodosClientes() {
+		long elapsedTimeMillis=0;
 		if (debug)
 			System.out.printf("encuentraCaminosTodosClientes\n");
 		try {
@@ -87,15 +94,14 @@ public class RecorreGrafo {
 				caminos.agregaNuevoCamino(((Row)rows.get(i)).getInt("id"),-1,-1,((Row)rows.get(i)).getInt("idseccion"));
 				generaCaminos();
 			}
-			long elapsedTimeMillis = System.currentTimeMillis()-start;
-			System.out.println("\nZona paralela:"+jomp.runtime.OMP.inParallel()+" tiempo("+(elapsedTimeMillis/1000F)+")");
+			elapsedTimeMillis = System.currentTimeMillis()-start;
 			// limpiaCaminosSinSalida();
 		} catch (InvalidQueryException e) {
 			if (debug)
 				System.out.printf("errorconsulta\n");
 		}
 		System.out.println("Terminado encuentraCaminosTodosClientes");
-		return caminos;
+		return elapsedTimeMillis;
 	}
 
 	private boolean debug = false;

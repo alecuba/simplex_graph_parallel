@@ -30,30 +30,33 @@ public class Secciones {
   } 
   
   private int buscaPosSiExiste(int idSeccion, int vertA, int vertB){
+	  boolean encontrado=false;
 	  int i=0;
-	  int pos=-1;
 	  Seccion seccion;
 	  if(secciones.size()>0){
-	  //omp parallel for shared(pos) private(seccion)
-	  for(i=(secciones.size()-1);i>=0;i--){
+	  /*//omp parallel for shared(encontrado) private(seccion) */
+	  for(i=secciones.size()-1;i>=0;i--){
 		  seccion = ((Seccion)secciones.get(i));
-		  if(seccion.idSeccion==idSeccion && seccion.vertA == vertA &&  seccion.vertB == vertB) {pos=i;break; }
+		  if(seccion.idSeccion==idSeccion && seccion.vertA == vertA &&  seccion.vertB == vertB) {encontrado=true;break; }
 	  }
 	  }
-	  return pos;
+	  if(!encontrado){ i=-1;} 
+	  return i;
   }
   
   public int getVertBSeccionID(int id){
 	  int vertB=-1;
-	  Seccion seccion = ((Seccion)secciones.get(id));
-	  if(id<0 || id< secciones.size()) vertB=seccion.vertB;
+	  if(id>=0&&id<secciones.size()&& ((Seccion)secciones.get(id))!=null){
+		  vertB=((Seccion)secciones.get(id)).vertB;
+	  }
 	  return vertB;
   }
   
   public int getVertASeccionID(int id){
 	  int vertA=-1;
-	  Seccion seccion = ((Seccion)secciones.get(id));
-	  if(id<0 || id< secciones.size()) vertA=seccion.vertA;
+	  if(id>=0&&id<secciones.size()&& ((Seccion)secciones.get(id))!=null){
+		  	vertA=((Seccion)secciones.get(id)).vertA;
+	  }
 	  return vertA;
   }
   
