@@ -9,7 +9,6 @@ import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-
 import javax.swing.AbstractButton;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
@@ -18,9 +17,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
-
 import java.awt.BorderLayout;
-
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -28,7 +25,6 @@ import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.text.DefaultCaret;
-
 import comun.Gestor;
 
 public class Principal {
@@ -74,14 +70,14 @@ public class Principal {
 			long memorialibre = 0;
 			Runtime runtime = Runtime.getRuntime();
 			while (true) {
-				try {
+				try {			
 					memorialibre = (runtime.totalMemory() - runtime
 							.freeMemory());
 					lblMemoriaUtilizada.setText("Memoria Maxima("
 							+ runtime.totalMemory() / mb + " MB) Actual:"
 							+ memorialibre / mb + " MB "
 							+ ((memorialibre * 100) / runtime.totalMemory())
-							+ " %");
+							+ "%");
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -396,13 +392,13 @@ public class Principal {
 		btnEncuentraCaminos.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				gestionBotones(false);
-				//Thread queryThread = new Thread() {
-				//      public void run() {
-				Principal.this.gestor.encuentraCaminos();						
+				Thread queryThread = new Thread() {
+				      public void run() {
+				Principal.this.gestor.encuentraCaminos(Integer.parseInt(txtMinsecciones.getText()), Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2,Integer.parseInt(txtMinclientes.getText()), Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));;						
 				gestionBotones(true);
-				//      }
-				//    };
-				//    queryThread.start();	
+				      }
+				    };
+				    queryThread.start();	
 			}
 		});
 

@@ -1,16 +1,18 @@
 package comun;
-import generacion.jomp.GenerarClientes;
-import generacion.jomp.GenerarGrafo;
+import generacion.GenerarClientes;
+import generacion.GenerarGrafo;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.RejectedExecutionException;
-import busqueda.jomp.Caminos;
-import busqueda.jomp.Caminos.Camino;
-import busqueda.jomp.RecorreGrafo;
-import busqueda.jomp.Secciones;
+
+import busqueda.Caminos;
+import busqueda.RecorreGrafo;
+import busqueda.Secciones;
+import busqueda.Caminos.Camino;
+
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
@@ -44,16 +46,20 @@ public class Gestor{
 			this.precargaTabla=precarga;
 		}
 		
-		public void generarSeccionesYClientes(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas,int minClientes, int maxClientes, int minConsumo,int maxConsumo){
+		public boolean generarSeccionesYClientes(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas,int minClientes, int maxClientes, int minConsumo,int maxConsumo){
+			boolean generado=false;
 			if (precargaTabla){
 				this.preCargaTabla();
 			}else{
-				generarSecciones(minSecciones,maxSecciones,minCruces,maxCruces,minEntradas,maxEntradas);
-				generaClientes(minClientes,maxClientes,minConsumo,maxConsumo);
+				if(generarSecciones(minSecciones,maxSecciones,minCruces,maxCruces,minEntradas,maxEntradas)){
+					generado=generaClientes(minClientes,maxClientes,minConsumo,maxConsumo);
+				}
 			}
+			return generado;
 		}
 		
-		public void generarSecciones(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas){
+		public boolean generarSecciones(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas){
+			boolean generado=false;
 			if (precargaTabla){
 				this.preCargaTabla();
 			}else{
@@ -61,6 +67,7 @@ public class Gestor{
 				if (grafo == null)	grafo = new GenerarGrafo(this);
 				grafo.setDebug(debug);
 				if (grafo.generar(minSecciones,maxSecciones,minCruces,maxCruces, minEntradas, maxEntradas)) {
+					generado=true;
 					if (debug)
 						grafo.pintaTabla();
 					if (autoinserta && esperaConexionCassandra()) {
@@ -69,14 +76,19 @@ public class Gestor{
 				}
 			}		
 			}
+			if(!generado) System.out.println("No se pudo generar los grafos");
+			return generado;
 		}
 		
-		public void generaClientes(int minClientes, int maxClientes, int minConsumo,int maxConsumo){
+		public boolean generaClientes(int minClientes, int maxClientes, int minConsumo,int maxConsumo){
+			boolean generado=false;
 			if (precargaTabla) {this.preCargaTabla();}else{
 			if (esperaConexionCassandra()) {
 				if (clientes == null) clientes = new GenerarClientes(grafo,this);
 				clientes.setDebug(debug);
 				clientes.generar(minClientes,maxClientes,minConsumo,maxConsumo);
+				if(grafo!=null) clientes.conectarClientes(grafo);
+				generado=true;
 				if (debug)
 					clientes.pintaTabla();
 				if (autoinserta) {
@@ -86,38 +98,26 @@ public class Gestor{
 				}
 			}
 			}
+			if(!generado) System.out.println("No se pudo generar a los clientes");
+			return generado;
 		}
 		
-		public void encuentraCaminos(){
-			if (precargaTabla) this.preCargaTabla();
-			if (esperaConexionCassandra()) {
-				// limpiarBD();
-				// grafo = new GenerarGrafo(Principal.this);
-				// grafo.setDebug(debug);
-				// if(grafo.generar(Integer.parseInt(txtMinsecciones.getText()),Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2)){
-				// grafo.pintaTabla();
-				// grafo.insertaGrafoCQL(true);
-				// grafo.pintaBD();
-				// clientes = new
-				// GenerarClientes(grafo,Principal.this);
-				// clientes.setDebug(debug);
-				// clientes.generar(Integer.parseInt(txtMinclientes.getText()),Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));
-				// clientes.conectarClientes(grafo.numeroSecciones());
-				// clientes.insertaGrafoCQL(true);
-				// clientes.pintaBD();
-				Secciones secciones=new Secciones();
-				Caminos caminos = new Caminos(secciones);
-				RecorreGrafo recorre = new RecorreGrafo(this,caminos);
-				recorre.setDebug(true);
-				System.out.println("1\n");
-				System.out.println("Numero vertices:"
-						+ recorre.consultaNumeroVertices());
-				
-				recorre.encuentraCaminosTodosClientes();
-				caminos.pintaCaminosGenerados();
-				// }
-			}
+		public void encuentraCaminos(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas,int minClientes, int maxClientes, int minConsumo,int maxConsumo){
+			boolean generado=true;
+			if((grafo==null) && checkGrafoVacioBD()) generado=generarSecciones( minSecciones,  maxSecciones,  minCruces, maxCruces, minEntradas, maxEntradas);
+			if((clientes==null)&&checkClienteVacioBD()) generado=generaClientes(minClientes,  maxClientes,  minConsumo, maxConsumo);
+			if(generado){
+						Secciones secciones=new Secciones();
+						Caminos caminos = new Caminos(secciones);
+						RecorreGrafo recorre = new RecorreGrafo(this,caminos);
+						recorre.setDebug(true);
+						recorre.encuentraCaminosTodosClientes();
+						caminos.pintaCaminosGenerados();							
+						}else{
+							if(!generado) System.out.println("No se pudo encontrar caminos porque no se genero");
+						}
 		}
+		
 		public void limpiarBD() {
 			if (enciendeProcesoCassandra() && esperaConexionCassandra()) {
 				if (debug)
@@ -181,6 +181,56 @@ public class Gestor{
 					System.out.println();
 				}
 			}
+		}
+		
+		public boolean checkGrafoVacioBD() {
+			boolean vacia = false;
+			ResultSet results = null;
+			if (esperaConexionCassandra()) {
+				try {
+					getCassandraSession().execute("USE Bd");
+				} catch (InvalidQueryException e) {
+					vacia = true;
+					System.out.println("No existe BD\n");
+				}
+				if(!vacia){
+				try {
+					results = getCassandraSession().execute("SELECT * FROM vertices LIMIT 1");
+				} catch (InvalidQueryException e) {
+					vacia = true;
+					System.out.println("No existe vertices\n");
+				}
+				}
+				if(!vacia && results != null){
+					if(results.all().isEmpty()) vacia=true;
+				}
+			}
+			return vacia;
+		}
+		
+		public boolean checkClienteVacioBD() {
+			boolean vacia = false;
+			ResultSet results = null;
+			if (esperaConexionCassandra()) {
+				try {
+					getCassandraSession().execute("USE Bd");
+				} catch (InvalidQueryException e) {
+					vacia = true;
+					System.out.println("No existe BD\n");
+				}
+				if(!vacia){
+				try {
+					results = getCassandraSession().execute("SELECT * FROM clientes LIMIT 1");
+				} catch (InvalidQueryException e) {
+					vacia = true;
+					System.out.println("No existe clientes\n");
+				}
+				}
+				if(!vacia && results != null){
+					if(results.all().isEmpty()) vacia=true;
+				}
+			}
+			return vacia;
 		}
 
 		public void pintaClienteBD() {
