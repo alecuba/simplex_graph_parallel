@@ -74,6 +74,7 @@ public class GenerarGrafo {
 	
 	private void algoritmoGeneraEntradas(int entradasActual){
 		int nEntradas=0;
+		if(entradasActual<=tablaGrafo.length){
 		/*//omp parallel shared(nEntradas)*/
 		{
 		while(nEntradas<=entradasActual){
@@ -90,6 +91,7 @@ public class GenerarGrafo {
 			if(valor==1){
 				nEntradas++;
 			}
+		}
 		}
 		}
 	}

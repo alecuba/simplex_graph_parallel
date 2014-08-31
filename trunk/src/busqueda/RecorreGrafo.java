@@ -86,6 +86,7 @@ public class RecorreGrafo {
 							+ ((Row)rows.get(i)).getInt("id") + ") conectado a la Seccion("
 							+ ((Row)rows.get(i)).getInt("idseccion") + ")\n");
 					caminos.agregaNuevoCamino(((Row)rows.get(i)).getInt("id"),-1,-1,((Row)rows.get(i)).getInt("idseccion"));
+					
 					generaCaminos();
 				}
 				elapsedTimeMillis = System.currentTimeMillis()-start;

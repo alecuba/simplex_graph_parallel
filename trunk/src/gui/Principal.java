@@ -9,6 +9,7 @@ import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+
 import javax.swing.AbstractButton;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
@@ -17,7 +18,9 @@ import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+
 import java.awt.BorderLayout;
+
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -25,6 +28,9 @@ import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.text.DefaultCaret;
+
+import mpi.MPI;
+import mpi.MPIException;
 import comun.Gestor;
 
 public class Principal {
@@ -60,11 +66,32 @@ public class Principal {
 			Principal window = new Principal();
 			window.frame.setVisible(true);
 	}
+	
+	/**
+	 * Launch the application. MPJ
+	
+	public static void main(String[] args) {
+		MPI.Init(args);
+		int rank = 0;
+		try {
+			rank = MPI.COMM_WORLD.Rank();
+			int size = MPI.COMM_WORLD.Size();
+		} catch (MPIException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+        if(rank==0){
+			Principal window = new Principal();
+			window.frame.setVisible(true);
+        }
+	}*/
 
 	/**
 	 * Create the application.
 	 */
 	public Principal() {
+		
 		jomp.runtime.OMP.setNumThreads(4);
 		initialize();
 		ActualizaMemoria.start();
