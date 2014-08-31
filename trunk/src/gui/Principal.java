@@ -45,7 +45,13 @@ public class Principal {
 	private JButton btnGenerarClientes;
 	private JButton btnGrafoyCliente;
 	private JButton btnEncuentraCaminos;
-	public JCheckBoxMenuItem chckbxmntmCargaCopia;
+	private JCheckBoxMenuItem chckbxmntmCargaCopia;
+	private JCheckBoxMenuItem chckbxmntmBDTest1;
+	private JCheckBoxMenuItem chckbxmntmBDTest50;
+	private JCheckBoxMenuItem chckbxmntmBDTest100;
+	private JCheckBoxMenuItem chckbxmntmBDTest200;
+	private JCheckBoxMenuItem chckbxmntmBDTest400;
+	private int tablaNum = 50;
 
 	/**
 	 * Launch the application.
@@ -91,7 +97,7 @@ public class Principal {
 	 */
 	private void initialize() {
 		frame = new JFrame();
-		frame.setBounds(100, 100, 640, 600);
+		frame.setBounds(100, 100, 640, 700);
 		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frame.addWindowListener(new WindowListener() {
 			public void windowClosing(WindowEvent e) {
@@ -165,9 +171,154 @@ public class Principal {
 
 		JMenu mnOpciones = new JMenu("Opciones");
 		menuBar.add(mnOpciones);
+		
+		JMenu mnBDTest = new JMenu("BD Test");
+		menuBar.add(mnBDTest);
+		
+		JMenuItem mntmTest1 = new JMenuItem("Copia Test 1");
+		mnBDTest.add(mntmTest1);
+		mntmTest1.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.copiaTabla("1",false);
+			}
+		});
+		chckbxmntmBDTest1 = new JCheckBoxMenuItem("Usa Test 1");
+		mnBDTest.add(chckbxmntmBDTest1);
+		chckbxmntmBDTest1.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(Principal.this.chckbxmntmBDTest1.isSelected()){
+					Principal.this.chckbxmntmBDTest50.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest200.setSelected(false);
+					Principal.this.chckbxmntmBDTest400.setSelected(false);
+					Principal.this.tablaNum=1;
+					Principal.this.gestor.setPrecargaTabla(tablaNum);
+				}
+			}
+		});	
+		
+		
+		JMenuItem mntmCopia50 = new JMenuItem("Copia Test 50");
+		mnBDTest.add(mntmCopia50);
+		mntmCopia50.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.copiaTabla("50",false);
+			}
+		});
+		chckbxmntmBDTest50 = new JCheckBoxMenuItem("Usa Test 50");
+		mnBDTest.add(chckbxmntmBDTest50);
+		chckbxmntmBDTest50.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(Principal.this.chckbxmntmBDTest50.isSelected()){
+					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest200.setSelected(false);
+					Principal.this.chckbxmntmBDTest400.setSelected(false);
+					Principal.this.tablaNum=50;
+					Principal.this.gestor.setPrecargaTabla(tablaNum);
+				}
+			}
+		});	
+		
+		JMenuItem mntmCopia100 = new JMenuItem("Copia Test 100");
+		mnBDTest.add(mntmCopia100);
+		mntmCopia100.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.copiaTabla("100",false);
+			}
+		});
+		
+		chckbxmntmBDTest100 = new JCheckBoxMenuItem("Usa Test 100");
+		mnBDTest.add(chckbxmntmBDTest100);
+		chckbxmntmBDTest100.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(Principal.this.chckbxmntmBDTest100.isSelected()){
+					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest50.setSelected(false);
+					Principal.this.chckbxmntmBDTest200.setSelected(false);
+					Principal.this.chckbxmntmBDTest400.setSelected(false);
+					Principal.this.tablaNum=100;
+					Principal.this.gestor.setPrecargaTabla(tablaNum);
+				}
+			}
+		});	
 
+		JMenuItem mntmCopia200 = new JMenuItem("Copia Test 200");
+		mnBDTest.add(mntmCopia200);
+		mntmCopia200.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.copiaTabla("200",false);
+			}
+		});
+		chckbxmntmBDTest200 = new JCheckBoxMenuItem("Usa Test 200");
+		mnBDTest.add(chckbxmntmBDTest200);
+		chckbxmntmBDTest200.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(Principal.this.chckbxmntmBDTest200.isSelected()){
+					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest50.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest400.setSelected(false);
+					Principal.this.tablaNum=200;
+					Principal.this.gestor.setPrecargaTabla(tablaNum);
+				}
+			}
+		});	
+		
+		JMenuItem mntmCopia400 = new JMenuItem("Copia Test 400");
+		mnBDTest.add(mntmCopia400);
+		mntmCopia400.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.copiaTabla("400",false);
+			}
+		});
+		chckbxmntmBDTest400 = new JCheckBoxMenuItem("Usa Test 400");
+		mnBDTest.add(chckbxmntmBDTest400);
+		chckbxmntmBDTest400.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(Principal.this.chckbxmntmBDTest400.isSelected()){
+					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest50.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest200.setSelected(false);
+					Principal.this.tablaNum=400;
+					Principal.this.gestor.setPrecargaTabla(tablaNum);
+				}
+			}
+		});	
+
+		if(gestor.getPrecargaTabla()[1]==400){
+			chckbxmntmBDTest50.setSelected(true);
+			}else{
+				chckbxmntmBDTest50.setSelected(false);
+			}
+		if(gestor.getPrecargaTabla()[1]==200){
+			chckbxmntmBDTest50.setSelected(true);
+			}else{
+				chckbxmntmBDTest50.setSelected(false);
+			}
+		if(gestor.getPrecargaTabla()[1]==100){
+			chckbxmntmBDTest50.setSelected(true);
+			}else{
+				chckbxmntmBDTest50.setSelected(false);
+			}
+		if(gestor.getPrecargaTabla()[1]==50){
+			chckbxmntmBDTest50.setSelected(true);
+			}else{
+				chckbxmntmBDTest50.setSelected(false);
+			}
+		if(gestor.getPrecargaTabla()[1]==1){
+			chckbxmntmBDTest1.setSelected(true);
+			}else{
+				chckbxmntmBDTest1.setSelected(false);
+			}
 		JCheckBoxMenuItem chckbxmntmDebug = new JCheckBoxMenuItem("Debug");
-		chckbxmntmDebug.setSelected(true);
+		if(gestor.getDebug()){
+			chckbxmntmDebug.setSelected(true);
+			}else{
+				chckbxmntmDebug.setSelected(false);
+			}
 		mnOpciones.add(chckbxmntmDebug);
 		chckbxmntmDebug.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -178,7 +329,11 @@ public class Principal {
 
 		JCheckBoxMenuItem chckbxmntmAutoInserta = new JCheckBoxMenuItem(
 				"Auto inserta");
-		chckbxmntmAutoInserta.setSelected(false);
+		if(gestor.getAutoInserta()){
+			chckbxmntmAutoInserta.setSelected(true);
+			}else{
+				chckbxmntmAutoInserta.setSelected(false);
+			}
 		mnOpciones.add(chckbxmntmAutoInserta);
 		chckbxmntmAutoInserta.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -332,12 +487,20 @@ public class Principal {
 		panel.add(verticalBox_2);
 
 		chckbxmntmCargaCopia = new JCheckBoxMenuItem("CargaCopia");
+		if(gestor.getPrecargaTabla()[0]==1){
 		chckbxmntmCargaCopia.setSelected(true);
+		}else{
+			chckbxmntmCargaCopia.setSelected(false);
+		}
 		mnOpciones.add(chckbxmntmCargaCopia);
+		
 		chckbxmntmCargaCopia.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				Principal.this.gestor.setPrecargaTabla(((AbstractButton) e.getSource())
-						.getModel().isSelected());
+				if(((AbstractButton) e.getSource()).getModel().isSelected()){
+					Principal.this.gestor.setPrecargaTabla(1,Principal.this.tablaNum);
+				}else{
+					Principal.this.gestor.setPrecargaTabla(0,Principal.this.tablaNum);
+				}
 			}
 		});
 
@@ -410,10 +573,10 @@ public class Principal {
 		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
 		frame.getContentPane().add(scroll, BorderLayout.SOUTH);
 		frame.getContentPane().add(lblMemoriaUtilizada, BorderLayout.NORTH);
-		textArea.setRows(22);
+		textArea.setRows(30);
 		// frame.getContentPane().add(textArea, BorderLayout.SOUTH);
 		JTextAreaOutputStream out = new JTextAreaOutputStream(textArea);
-		System.setOut(new PrintStream(out));
+		//System.setOut(new PrintStream(out));
 
 	}
 	

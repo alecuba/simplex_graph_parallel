@@ -23,7 +23,6 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 
 public class Gestor{
 		private Cluster cluster = null;
@@ -32,24 +31,49 @@ public class Gestor{
 		private GenerarClientes clientes;
 		private boolean debug = true;
 		private boolean autoinserta = false;
-		private boolean precargaTabla = true;
+		private int usaTablaPrecargada = 1;
+		private int tablaNum = 1;
 		
 		public void setDebug(boolean debug) {
 			this.debug = debug;
 		}
-
-		public void setConsultaCopia(boolean consultaCopia) {
-			preCargaTabla();
-		}
-
 		
-		public void setPrecargaTabla(boolean precarga){
-			this.precargaTabla=precarga;
+		public boolean getDebug(){
+			return debug;
+		}
+		
+		public void setPrecargaTabla(int precarga,int num){
+			this.usaTablaPrecargada=precarga;
+			this.tablaNum=num;
+		}
+		
+		public void setPrecargaTabla(int num){
+			this.tablaNum=num;
+		}
+		
+		public int[] getPrecargaTabla(){
+			int[] datos={usaTablaPrecargada,tablaNum};
+			return datos;
+		}
+		
+		public boolean getAutoInserta(){
+			return autoinserta;
+		}
+		
+		
+		private void preCargaTabla(){
+           switch(tablaNum){
+           case 1: preCargaTabla2();System.out.println("Utilizando tabla test1");break;
+           case 50: copiaTabla("50",true);System.out.println("Utilizando tabla test50");break;
+           case 100:copiaTabla("100",true);System.out.println("Utilizando tabla test100");break;
+           case 200:copiaTabla("200",true);System.out.println("Utilizando tabla test200");break;
+           case 400:copiaTabla("400",true);System.out.println("Utilizando tabla test400");break;
+           }
 		}
 		
 		public boolean generarSeccionesYClientes(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas,int minClientes, int maxClientes, int minConsumo,int maxConsumo){
 			boolean generado=false;
-			if (precargaTabla){
+			if (usaTablaPrecargada==1){
 				this.preCargaTabla();
 			}else{
 				if(generarSecciones(minSecciones,maxSecciones,minCruces,maxCruces,minEntradas,maxEntradas)){
@@ -61,7 +85,7 @@ public class Gestor{
 		
 		public boolean generarSecciones(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas){
 			boolean generado=false;
-			if (precargaTabla){
+			if (usaTablaPrecargada==1){
 				this.preCargaTabla();
 			}else{
 			if (esperaConexionCassandra()) {
@@ -83,7 +107,7 @@ public class Gestor{
 		
 		public boolean generaClientes(int minClientes, int maxClientes, int minConsumo,int maxConsumo){
 			boolean generado=false;
-			if (precargaTabla) {this.preCargaTabla();}else{
+			if (usaTablaPrecargada==1) {this.preCargaTabla();}else{
 			if (esperaConexionCassandra()) {
 				if (clientes == null) clientes = new GenerarClientes(grafo,this);
 				clientes.setDebug(debug);
@@ -105,6 +129,9 @@ public class Gestor{
 		
 		public void encuentraCaminos(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas,int minClientes, int maxClientes, int minConsumo,int maxConsumo){
 			boolean generado=true;
+			if (usaTablaPrecargada==1){
+				this.preCargaTabla();
+			}
 			if((grafo==null) && checkGrafoVacioBD()) generado=generarSecciones( minSecciones,  maxSecciones,  minCruces, maxCruces, minEntradas, maxEntradas);
 			if((clientes==null)&&checkClienteVacioBD()) generado=generaClientes(minClientes,  maxClientes,  minConsumo, maxConsumo);
 			if(generado){
@@ -262,8 +289,8 @@ public class Gestor{
 				}
 			}
 		}
-
-		public void preCargaTabla() {
+		
+		public void preCargaTabla2() {
 			if (esperaConexionCassandra()) {
 				try {
 					getCassandraSession().execute("USE BD");
@@ -356,68 +383,99 @@ public class Gestor{
 			}
 		}
 
-		public void copiaTabla() {
-			boolean vacia = false;
+		public void copiaTabla(String num,boolean restaura) {
 			if (esperaConexionCassandra()) {
+			 if(!restaura){
 				try {
-					getCassandraSession().execute("USE BD");
+					getCassandraSession().execute("USE Bd");
 				} catch (InvalidQueryException e) {
-					vacia = true;
-					System.out.println("Vacia o no existe BD\n");
-				}
-				if (!vacia) {
-					/*
-					// getCassandraSession().execute("DROP TABLE Bd.verticesCP");
-					// getCassandraSession().execute("DROP TABLE Bd.clientesCP");
-					// getCassandraSession().execute("DROP TABLE Bd.caracteristicasVerticesCP");
-					// getCassandraSession().execute("DROP INDEX Bd.vertices_vertACP");
-					// getCassandraSession().execute("DROP INDEX Bd.vertices_vertBCP");
-					// getCassandraSession().execute("CREATE TABLE Bd.verticesCP (vertA int, vertB int, idseccion int PRIMARY KEY)");
-					// getCassandraSession().execute("CREATE INDEX vertices_vertACP ON Bd.verticesCP (vertA)");
-					// getCassandraSession().execute("CREATE INDEX vertices_vertBCP ON Bd.verticesCP (vertB)");
-					// getCassandraSession().execute("CREATE TABLE Bd.caracteristicasVerticesCP (idseccion int PRIMARY KEY, consumoMax int, coste float)");
-					// getCassandraSession().execute("CREATE TABLE Bd.clientesCP (id int PRIMARY KEY, idseccion int,consumoActual int)");
-					//BatchStatement batch = new BatchStatement();
-					PreparedStatement psExtremos = getCassandraSession()
-							.prepare(
-									"INSERT INTO Bd.verticesCP (vertA,vertB,idseccion) VALUES (?, ?, ?)");
-					PreparedStatement psCaracteristicas = getCassandraSession()
-							.prepare(
-									"INSERT INTO Bd.caracteristicasVerticesCP (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
-					PreparedStatement psClientes = getCassandraSession()
-							.prepare(
-									"INSERT INTO Bd.clientesCP (id, idseccion,consumoActual) VALUES (?, ?, ?)");
-					ResultSet results;
-					/*
-					 * ResultSet results =
-					 * getCassandraSession().execute("SELECT * FROM Bd.vertices");
-					 * while(results.iterator().hasNext()){ Row row =
-					 * results.iterator().next();
-					 * batch.add(psExtremos.bind(row.getInt
-					 * ("idseccion"),row.getInt("vertA"),row.getInt("vertB"))); }
-					 * results = getCassandraSession().execute(
-					 * "SELECT * FROM Bd.caracteristicasVertices");
-					 * while(results.iterator().hasNext()){ Row row =
-					 * results.iterator().next();
-					 * batch.add(psCaracteristicas.bind(row
-					 * .getInt("idseccion"),row.getInt
-					 * ("consumoMax"),row.getFloat("coste"))); }
-					 
-					results = getCassandraSession().execute(
-							"SELECT * FROM Bd.clientes");
-					while (results.iterator().hasNext()) {
-						Row row = results.iterator().next();
-						batch.add(psClientes.bind(row.getInt("id"),
-								row.getInt("idseccion"),
-								row.getInt("consumoActual")));
-					}
-					getCassandraSession().execute(batch);
-					*/
+					getCassandraSession().execute("CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
+			    	getCassandraSession().execute("USE Bd");
 				}
 
-				System.out.println();
+				try {
+					getCassandraSession().execute("SELECT * FROM Bd.vertices"+num+" LIMIT 1");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE TABLE Bd.vertices"+num+" (vertA int, vertB int, idseccion int PRIMARY KEY)");
+					getCassandraSession().execute("CREATE INDEX vertices_vertA"+num+" ON Bd.vertices"+num+" (vertA)");
+					getCassandraSession().execute("CREATE INDEX vertices_vertB"+num+" ON Bd.vertices"+num+" (vertB)");
+				}
+				try {
+					getCassandraSession().execute("SELECT * FROM Bd.caracteristicasVertices"+num+" LIMIT 1");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE TABLE Bd.caracteristicasVertices"+num+" (idseccion int PRIMARY KEY, consumoMax int, coste float)");
+				}
+				try {
+					getCassandraSession().execute("SELECT * FROM Bd.clientes"+num+" LIMIT 1");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE TABLE Bd.clientes"+num+" (id int PRIMARY KEY, idseccion int,consumoActual int)");
+				}
+			 
+				BatchStatement batch = new BatchStatement();
+				PreparedStatement psExtremos = getCassandraSession().prepare("INSERT INTO Bd.vertices"+num+" (vertA,vertB,idseccion) VALUES (?, ?, ?)");
+				PreparedStatement psCaracteristicas = getCassandraSession().prepare("INSERT INTO Bd.caracteristicasVertices"+num+" (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
+				PreparedStatement psClientes = getCassandraSession().prepare("INSERT INTO Bd.clientes"+num+" (id, idseccion,consumoActual) VALUES (?, ?, ?)");
+				ResultSet results =	getCassandraSession().execute("SELECT * FROM Bd.vertices");
+				while(results.iterator().hasNext()){ 
+						Row row = results.iterator().next();
+						batch.add(psExtremos.bind(row.getInt("idseccion"),row.getInt("vertA"),row.getInt("vertB"))); }
+						results = getCassandraSession().execute("SELECT * FROM Bd.caracteristicasVertices");
+				while(results.iterator().hasNext()){
+						Row row = results.iterator().next();
+						batch.add(psCaracteristicas.bind(row.getInt("idseccion"),row.getInt("consumoMax"),row.getFloat("coste"))); }
+					 	results = getCassandraSession().execute("SELECT * FROM Bd.clientes");
+				while (results.iterator().hasNext()) {
+						Row row = results.iterator().next();
+						batch.add(psClientes.bind(row.getInt("id"),row.getInt("idseccion"),row.getInt("consumoActual")));
+					}
+					getCassandraSession().execute(batch);
+			}
+			}else{
+				try {
+					getCassandraSession().execute("USE Bd");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
+			    	getCassandraSession().execute("USE Bd");
+				}
+
+				try {
+					getCassandraSession().execute("SELECT * FROM Bd.vertices LIMIT 1");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion int PRIMARY KEY)");
+					getCassandraSession().execute("CREATE INDEX vertices_vertA ON Bd.vertices (vertA)");
+					getCassandraSession().execute("CREATE INDEX vertices_vertB ON Bd.vertices (vertB)");
+				}
+				try {
+					getCassandraSession().execute("SELECT * FROM Bd.caracteristicasVertices LIMIT 1");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE TABLE Bd.caracteristicasVertices (idseccion int PRIMARY KEY, consumoMax int, coste float)");
+				}
+				try {
+					getCassandraSession().execute("SELECT * FROM Bd.clientes LIMIT 1");
+				} catch (InvalidQueryException e) {
+					getCassandraSession().execute("CREATE TABLE Bd.clientes (id int PRIMARY KEY, idseccion int,consumoActual int)");
+				}
+				BatchStatement batch = new BatchStatement();
+				PreparedStatement psExtremos = getCassandraSession().prepare("INSERT INTO Bd.vertices (vertA,vertB,idseccion) VALUES (?, ?, ?)");
+				PreparedStatement psCaracteristicas = getCassandraSession().prepare("INSERT INTO Bd.caracteristicasVertices (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
+				PreparedStatement psClientes = getCassandraSession().prepare("INSERT INTO Bd.clientes (id, idseccion,consumoActual) VALUES (?, ?, ?)");
+				ResultSet results =	getCassandraSession().execute("SELECT * FROM Bd.vertices"+num);
+				while(results.iterator().hasNext()){ 
+						Row row = results.iterator().next();
+						batch.add(psExtremos.bind(row.getInt("idseccion"),row.getInt("vertA"),row.getInt("vertB"))); }
+						results = getCassandraSession().execute("SELECT * FROM Bd.caracteristicasVertices"+num);
+				while(results.iterator().hasNext()){
+						Row row = results.iterator().next();
+						batch.add(psCaracteristicas.bind(row.getInt("idseccion"),row.getInt("consumoMax"),row.getFloat("coste"))); }
+					 	results = getCassandraSession().execute("SELECT * FROM Bd.clientes"+num);
+				while (results.iterator().hasNext()) {
+						Row row = results.iterator().next();
+						batch.add(psClientes.bind(row.getInt("id"),row.getInt("idseccion"),row.getInt("consumoActual")));
+					}
+					getCassandraSession().execute(batch);
 			}
 		}
+		
 		public void setAutoInserta(boolean insertar) {
 			this.autoinserta = insertar;
 		}
