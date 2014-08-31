@@ -13,9 +13,11 @@ import busqueda.Caminos;
 import busqueda.RecorreGrafo;
 import busqueda.Secciones;
 
+import com.codahale.metrics.Gauge;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
+import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
@@ -33,6 +35,8 @@ public class Gestor{
 		private boolean autoinserta = false;
 		private int usaTablaPrecargada = 1;
 		private int tablaNum = 1;
+		private int maxSimultaneousRequest;
+		private int maxConnectionsPerHost;
 		
 		public void setDebug(boolean debug) {
 			this.debug = debug;
@@ -384,8 +388,10 @@ public class Gestor{
 		}
 
 		public void copiaTabla(String num,boolean restaura) {
+			System.out.println("restaura:"+restaura+" para num:"+num);
 			if (esperaConexionCassandra()) {
 			 if(!restaura){
+				
 				try {
 					getCassandraSession().execute("USE Bd");
 				} catch (InvalidQueryException e) {
@@ -429,7 +435,6 @@ public class Gestor{
 						batch.add(psClientes.bind(row.getInt("id"),row.getInt("idseccion"),row.getInt("consumoActual")));
 					}
 					getCassandraSession().execute(batch);
-			}
 			}else{
 				try {
 					getCassandraSession().execute("USE Bd");
@@ -460,20 +465,22 @@ public class Gestor{
 				PreparedStatement psCaracteristicas = getCassandraSession().prepare("INSERT INTO Bd.caracteristicasVertices (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
 				PreparedStatement psClientes = getCassandraSession().prepare("INSERT INTO Bd.clientes (id, idseccion,consumoActual) VALUES (?, ?, ?)");
 				ResultSet results =	getCassandraSession().execute("SELECT * FROM Bd.vertices"+num);
+				System.out.println("Se van a insertar "+results.all().size()+" vertices");
 				while(results.iterator().hasNext()){ 
 						Row row = results.iterator().next();
 						batch.add(psExtremos.bind(row.getInt("idseccion"),row.getInt("vertA"),row.getInt("vertB"))); }
-						results = getCassandraSession().execute("SELECT * FROM Bd.caracteristicasVertices"+num);
+				results = getCassandraSession().execute("SELECT * FROM Bd.caracteristicasVertices"+num);
 				while(results.iterator().hasNext()){
 						Row row = results.iterator().next();
 						batch.add(psCaracteristicas.bind(row.getInt("idseccion"),row.getInt("consumoMax"),row.getFloat("coste"))); }
-					 	results = getCassandraSession().execute("SELECT * FROM Bd.clientes"+num);
+				results = getCassandraSession().execute("SELECT * FROM Bd.clientes"+num);
 				while (results.iterator().hasNext()) {
 						Row row = results.iterator().next();
 						batch.add(psClientes.bind(row.getInt("id"),row.getInt("idseccion"),row.getInt("consumoActual")));
 					}
 					getCassandraSession().execute(batch);
 			}
+		   }
 		}
 		
 		public void setAutoInserta(boolean insertar) {
@@ -488,6 +495,10 @@ public class Gestor{
 			if(session==null){
 				esperaConexionCassandra();
 			} else{
+				
+				//Gauge<Integer> gauge = session.getCluster().getMetrics().getOpenConnections();
+				//session.getCluster().getMetrics().getOpenConnections()
+				//Integer numberOfHosts = session.getCluster().getMetrics().getOpenConnections().getValue();
 			return session;
 			}
 			return session;
@@ -508,9 +519,9 @@ public class Gestor{
 						e3.printStackTrace();
 					}
 					try {
-						cluster = Cluster.builder().addContactPoint("127.0.0.1")
-								.build();
+						cluster = Cluster.builder().addContactPoint("127.0.0.1").withProtocolVersion(2).build();
 						Metadata metadata = cluster.getMetadata();
+						this.maxSimultaneousRequest=cluster.getConfiguration().getPoolingOptions().getMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL);
 						if (debug)
 							System.out.printf("Conectado al cluster: %s\n",
 									metadata.getClusterName());

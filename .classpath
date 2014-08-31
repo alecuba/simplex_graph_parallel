@@ -11,5 +11,8 @@
 	<classpathentry kind="lib" path="lib/jomp1.0b.jar"/>
 	<classpathentry kind="lib" path="lib/netty-3.9.0.Final.jar"/>
 	<classpathentry kind="lib" path="lib/cassandra-driver-core-2.1.0.jar"/>
+	<classpathentry kind="lib" path="mpij/lib/mpi.jar"/>
+	<classpathentry kind="lib" path="mpij/lib/mpiExp.jar"/>
+	<classpathentry kind="lib" path="mpij/lib/mpj.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
