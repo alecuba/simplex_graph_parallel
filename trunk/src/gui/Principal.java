@@ -53,6 +53,7 @@ public class Principal {
 	private JButton btnEncuentraCaminos;
 	private JCheckBoxMenuItem chckbxmntmCargaCopia;
 	private JCheckBoxMenuItem chckbxmntmBDTest1;
+	private JCheckBoxMenuItem chckbxmntmBDTest2;
 	private JCheckBoxMenuItem chckbxmntmBDTest50;
 	private JCheckBoxMenuItem chckbxmntmBDTest100;
 	private JCheckBoxMenuItem chckbxmntmBDTest200;
@@ -94,7 +95,7 @@ public class Principal {
 		
 		jomp.runtime.OMP.setNumThreads(4);
 		initialize();
-		ActualizaMemoria.start();
+		//ActualizaMemoria.start();
 	}
 
 	Thread ActualizaMemoria = new Thread() {
@@ -225,6 +226,29 @@ public class Principal {
 			}
 		});	
 		
+		JMenuItem mntmTest2 = new JMenuItem("Copia Test 2");
+		mnBDTest.add(mntmTest2);
+		mntmTest2.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.copiaTabla("2",false);
+			}
+		});
+		chckbxmntmBDTest2 = new JCheckBoxMenuItem("Usa Test 2");
+		mnBDTest.add(chckbxmntmBDTest2);
+		chckbxmntmBDTest2.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(Principal.this.chckbxmntmBDTest2.isSelected()){
+					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest50.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest100.setSelected(false);
+					Principal.this.chckbxmntmBDTest200.setSelected(false);
+					Principal.this.chckbxmntmBDTest400.setSelected(false);
+					Principal.this.tablaNum=2;
+					Principal.this.gestor.setPrecargaTabla(tablaNum);
+				}
+			}
+		});	
 		
 		JMenuItem mntmCopia50 = new JMenuItem("Copia Test 50");
 		mnBDTest.add(mntmCopia50);
@@ -239,6 +263,7 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				if(Principal.this.chckbxmntmBDTest50.isSelected()){
 					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest2.setSelected(false);
 					Principal.this.chckbxmntmBDTest100.setSelected(false);
 					Principal.this.chckbxmntmBDTest200.setSelected(false);
 					Principal.this.chckbxmntmBDTest400.setSelected(false);
@@ -262,6 +287,7 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				if(Principal.this.chckbxmntmBDTest100.isSelected()){
 					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest2.setSelected(false);
 					Principal.this.chckbxmntmBDTest50.setSelected(false);
 					Principal.this.chckbxmntmBDTest200.setSelected(false);
 					Principal.this.chckbxmntmBDTest400.setSelected(false);
@@ -284,6 +310,7 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				if(Principal.this.chckbxmntmBDTest200.isSelected()){
 					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest2.setSelected(false);
 					Principal.this.chckbxmntmBDTest50.setSelected(false);
 					Principal.this.chckbxmntmBDTest100.setSelected(false);
 					Principal.this.chckbxmntmBDTest400.setSelected(false);
@@ -306,6 +333,7 @@ public class Principal {
 			public void actionPerformed(ActionEvent e) {
 				if(Principal.this.chckbxmntmBDTest400.isSelected()){
 					Principal.this.chckbxmntmBDTest1.setSelected(false);
+					Principal.this.chckbxmntmBDTest2.setSelected(false);
 					Principal.this.chckbxmntmBDTest50.setSelected(false);
 					Principal.this.chckbxmntmBDTest100.setSelected(false);
 					Principal.this.chckbxmntmBDTest200.setSelected(false);
@@ -340,6 +368,12 @@ public class Principal {
 			}else{
 				chckbxmntmBDTest1.setSelected(false);
 			}
+		if(gestor.getPrecargaTabla()[1]==2){
+			chckbxmntmBDTest2.setSelected(true);
+			}else{
+				chckbxmntmBDTest2.setSelected(false);
+			}
+		
 		JCheckBoxMenuItem chckbxmntmDebug = new JCheckBoxMenuItem("Debug");
 		if(gestor.getDebug()){
 			chckbxmntmDebug.setSelected(true);

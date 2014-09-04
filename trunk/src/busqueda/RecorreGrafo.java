@@ -14,6 +14,7 @@ import com.datastax.driver.core.exceptions.InvalidQueryException;
 
 public class RecorreGrafo {
 
+
 	private Gestor gestor;
 	private Caminos caminos;
 	private boolean debug = false;
@@ -27,30 +28,91 @@ public class RecorreGrafo {
 		this.gestor = gestor;
 	}
 
-	public void generaCaminos(){		
-		while(!caminos.isFinalizados()){
-
-// OMP PARALLEL BLOCK BEGINS
-{
-  __omp_Class0 __omp_Object0 = new __omp_Class0();
-  // shared variables
-  __omp_Object0.caminos = caminos;
-  __omp_Object0.gestor = gestor;
-  // firstprivate variables
-  try {
-    jomp.runtime.OMP.doParallel(__omp_Object0);
-  } catch(Throwable __omp_exception) {
-    System.err.println("OMP Warning: Illegal thread exception ignored!");
-    System.err.println(__omp_exception);
-  }
-  // reduction variables
-  // shared variables
-  caminos = __omp_Object0.caminos;
-  gestor = __omp_Object0.gestor;
-}
-// OMP PARALLEL BLOCK ENDS
-	
-			
+	public void generaCaminos(int idcliente,int verticeInicial){
+		boolean iniciado=false;
+		while(!caminos.isFinalizados()||!iniciado){
+			/*//omp parallel shared(caminos,iniciado)*/ 
+			//{
+			Camino ultimoCamino=null;
+		    if(iniciado){
+		    	/*//omp critical getultimocamino*/
+		    	//{
+		    		ultimoCamino=caminos.getUltimoCaminoNoFinalizadoNiVisitando();
+		    	//}
+			}
+			if(ultimoCamino!=null||!iniciado){
+				boolean error=false;
+				int ultimoVertice;
+				if(iniciado&&ultimoCamino!=null){
+				ultimoVertice = caminos.getUltimoVerticeDelCamino(ultimoCamino);
+				}else{
+					ultimoVertice=verticeInicial;
+					/*//omp critical getultimocamino*/
+			    	//{
+			    		iniciado=true;
+			    	//}
+				}
+				if(ultimoVertice!=-1){
+					Statement  consulta1 = new SimpleStatement("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+ultimoVertice);
+					Statement  consulta2 = new SimpleStatement("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+ultimoVertice);
+					ResultSet  resultsA=null;
+					ResultSet  resultsB=null;
+						try {
+							resultsA = gestor.getCassandraSession().execute(consulta1);
+							resultsB = gestor.getCassandraSession().execute(consulta2);
+							error=false;
+					    } catch (InvalidQueryException e) {
+							if (debug)
+								System.out.println("Error al obtener ultima seccion");
+							e.printStackTrace();
+							error=true;
+					    }
+					if(!error){
+						if(resultsA!=null&&resultsB!=null){
+							List rowsA = (List)resultsA.all();
+							List rowsB = (List)resultsB.all();
+							if(rowsA.size()>0||rowsB.size()>0){
+									int[][] resultados = new int[rowsA.size() + rowsB.size()][2];
+									int i=0;
+									for(i=0;i<rowsA.size();i++){
+										resultados[i][0] = ((Row) rowsA.get(i)).getInt("vertB");
+										resultados[i][1] = ((Row) rowsA.get(i)).getInt("idseccion");
+									}
+									for(i=i;i<rowsA.size()+rowsB.size();i++){
+										resultados[i][1] = ((Row) rowsB.get(i-rowsA.size())).getInt("idseccion");
+										resultados[i][0] = ((Row) rowsB.get(i-rowsA.size())).getInt("vertA");
+									}
+									BubbleSortInt2d sort2d = new BubbleSortInt2d();
+									resultados=sort2d.sort(resultados);
+									/*//omp for schedule(dynamic,1)*/
+									for (int j = 0; j < resultados.length; j++) {
+										//if(debug) System.out.println("Busqueda Camino soy tread"+jomp.runtime.OMP.getThreadNum());
+										/*//omp critical caminos*/
+										//{
+										if(!caminos.isVerticeVisitadoDelCamino(ultimoCamino,resultados[j][0])){
+											if(ultimoVertice!=verticeInicial){
+											 caminos.agregaNuevoCamino(ultimoCamino, resultados[j][1], resultados[j][0]);
+											}else{
+												 caminos.agregaNuevoCamino(idcliente,verticeInicial, resultados[j][1], resultados[j][0]);
+											}											
+										}
+										//}
+									}
+								}
+						}
+						if(ultimoVertice!=verticeInicial){
+						/*//omp critical caminos*/
+						//{
+						caminos.borraCamino(ultimoCamino);
+						//}
+						}
+					}else{
+							System.out.println("ResultsA o B a es null");
+						}
+				}
+			}
+			/*//omp barrier	*/
+		  //}		
 		}
 	}
 	
@@ -85,9 +147,7 @@ public class RecorreGrafo {
 					System.out.print("Buscando camino para el cliente("
 							+ ((Row)rows.get(i)).getInt("id") + ") conectado a la Seccion("
 							+ ((Row)rows.get(i)).getInt("idseccion") + ")\n");
-					caminos.agregaNuevoCamino(((Row)rows.get(i)).getInt("id"),-1,-1,((Row)rows.get(i)).getInt("idseccion"));
-					
-					generaCaminos();
+					generaCaminos(((Row)rows.get(i)).getInt("id"),((Row)rows.get(i)).getInt("idseccion"));
 				}
 				elapsedTimeMillis = System.currentTimeMillis()-start;
 			}
@@ -132,116 +192,6 @@ public class RecorreGrafo {
 		 * }
 		 */
 
-	}
+	}}
 
-// OMP PARALLEL REGION INNER CLASS DEFINITION BEGINS
-private class __omp_Class0 extends jomp.runtime.BusyTask {
-  // shared variables
-  Caminos caminos;
-  Gestor gestor;
-  // firstprivate variables
-  // variables to hold results of reduction
-
-  public void go(int __omp_me) throws Throwable {
-  // firstprivate variables + init
-  // private variables
-  // reduction variables, init to default
-    // OMP USER CODE BEGINS
-
-			{
-			Camino ultimoCamino;
-                         // OMP CRITICAL BLOCK BEGINS
-                         synchronized (jomp.runtime.OMP.getLockByName("getultimocamino")) {
-                         // OMP USER CODE BEGINS
-
-			{
-			 ultimoCamino=caminos.getUltimoCaminoNoFinalizadoNiVisitando();
-		    }
-                         // OMP USER CODE ENDS
-                         }
-                         // OMP CRITICAL BLOCK ENDS
-
-			if(ultimoCamino!=null){
-				boolean error=false;
-				int ultimoVertice = caminos.getUltimoVerticeDelCamino(ultimoCamino);
-				if(ultimoVertice!=-1){
-					Statement  consulta1 = new SimpleStatement("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertA="+ultimoVertice);
-					Statement  consulta2 = new SimpleStatement("SELECT vertA,vertB,idseccion FROM Bd.vertices WHERE vertB="+ultimoVertice);
-					ResultSet  resultsA=null;
-					ResultSet  resultsB=null;
-						try {
-							resultsA = gestor.getCassandraSession().execute(consulta1);
-							resultsB = gestor.getCassandraSession().execute(consulta2);
-							error=false;
-					    } catch (InvalidQueryException e) {
-							if (debug)
-								System.out.println("Error al obtener ultima seccion");
-							e.printStackTrace();
-							error=true;
-					    }
-					if(!error){
-						if(resultsA!=null&&resultsB!=null){
-							List rowsA = (List)resultsA.all();
-							List rowsB = (List)resultsB.all();
-							if(rowsA.size()>0||rowsB.size()>0){
-									int[][] resultados = new int[rowsA.size() + rowsB.size()][2];
-									int i=0;
-									for(i=0;i<rowsA.size();i++){
-										resultados[i][0] = ((Row) rowsA.get(i)).getInt("vertB");
-										resultados[i][1] = ((Row) rowsA.get(i)).getInt("idseccion");
-									}
-									for(i=i;i<rowsA.size()+rowsB.size();i++){
-										resultados[i][1] = ((Row) rowsB.get(i-rowsA.size())).getInt("idseccion");
-										resultados[i][0] = ((Row) rowsB.get(i-rowsA.size())).getInt("vertA");
-									}
-									BubbleSortInt2d sort2d = new BubbleSortInt2d();
-									resultados=sort2d.sort(resultados);
-									/*//omp for schedule(dynamic,1)*/
-									for (int j = 0; j < resultados.length; j++) {
-                                                                                 // OMP CRITICAL BLOCK BEGINS
-                                                                                 synchronized (jomp.runtime.OMP.getLockByName("caminos")) {
-                                                                                 // OMP USER CODE BEGINS
-
-										{
-										if(!caminos.isVerticeVisitadoDelCamino(ultimoCamino,resultados[j][0])){
-											 caminos.agregaNuevoCaminoCopiando(ultimoCamino, resultados[j][1], resultados[j][0]);
-											
-										}
-										}
-                                                                                 // OMP USER CODE ENDS
-                                                                                 }
-                                                                                 // OMP CRITICAL BLOCK ENDS
-
-										
-									}
-								}
-						}
-                                                 // OMP CRITICAL BLOCK BEGINS
-                                                 synchronized (jomp.runtime.OMP.getLockByName("caminos")) {
-                                                 // OMP USER CODE BEGINS
-
-						{
-						caminos.borraCamino(ultimoCamino);
-						}
-                                                 // OMP USER CODE ENDS
-                                                 }
-                                                 // OMP CRITICAL BLOCK ENDS
-
-					}else{
-							System.out.println("ResultsA o B a es null");
-						}
-				}
-			}
-			/*//omp barrier*/
-		  }
-    // OMP USER CODE ENDS
-  // call reducer
-  // output to _rd_ copy
-  if (jomp.runtime.OMP.getThreadNum(__omp_me) == 0) {
-  }
-  }
-}
-// OMP PARALLEL REGION INNER CLASS DEFINITION ENDS
-
-}
 

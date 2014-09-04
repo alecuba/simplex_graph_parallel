@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.RejectedExecutionException;
 
+import linealizacion.PreparaLineal;
 import busqueda.Caminos;
 import busqueda.RecorreGrafo;
 import busqueda.Secciones;
@@ -34,7 +35,7 @@ public class Gestor{
 		private boolean debug = true;
 		private boolean autoinserta = false;
 		private int usaTablaPrecargada = 1;
-		private int tablaNum = 1;
+		private int tablaNum = 2;
 		private int maxSimultaneousRequest;
 		private int maxConnectionsPerHost;
 		
@@ -68,6 +69,7 @@ public class Gestor{
 		private void preCargaTabla(){
            switch(tablaNum){
            case 1: preCargaTabla2();System.out.println("Utilizando tabla test1");break;
+           case 2: preCargaTabla3();System.out.println("Utilizando tabla test2");break;
            case 50: copiaTabla("50",true);System.out.println("Utilizando tabla test50");break;
            case 100:copiaTabla("100",true);System.out.println("Utilizando tabla test100");break;
            case 200:copiaTabla("200",true);System.out.println("Utilizando tabla test200");break;
@@ -144,8 +146,15 @@ public class Gestor{
 						RecorreGrafo recorre = new RecorreGrafo(this,caminos);
 						recorre.setDebug(true);
 						long tiempo=recorre.encuentraCaminosTodosClientes();
-						caminos.pintaCaminosGenerados();					
+						caminos.pintaCaminosGenerados();
 						System.out.println("\nNumero Threads utilizados:"+jomp.runtime.OMP.getMaxThreads()+" tiempo("+(tiempo/1000F)+")");
+						if(!secciones.rellenaCaracteristicas(this)){
+							//Linealizar
+							PreparaLineal lineal = new PreparaLineal(this);
+							lineal.creaTablaPreSimplex(caminos,secciones);
+							lineal.pintaTablaPreSimplex();
+							//simplex
+						}
 						}else{
 							if(!generado) System.out.println("No se pudo encontrar caminos porque no se genero");
 						}
@@ -357,6 +366,91 @@ public class Gestor{
 						{ 9, 11210, (float) 0.91 }, { 10, 7721, (float) 1.25 },
 						{ 11, 9811, (float) 0.58 }, { 12, 13811, (float) 1.58 } };
 				int[][] clientes = { { 1, 4, 2039 }, { 0, 5, 1973 }, { 2, 2, 1587 } };
+				BatchStatement batch = new BatchStatement();
+				PreparedStatement psExtremos = getCassandraSession()
+						.prepare(
+								"INSERT INTO Bd.vertices (idseccion,vertA,vertB) VALUES (?, ?, ?)");
+				PreparedStatement psCaracteristicas = getCassandraSession()
+						.prepare(
+								"INSERT INTO Bd.caracteristicasVertices (idseccion, consumoMax, coste) VALUES (?, ?, ?)");
+				PreparedStatement psClientes = getCassandraSession()
+						.prepare(
+								"INSERT INTO Bd.clientes (id, idseccion,consumoActual) VALUES (?, ?, ?)");
+				int i;
+				for (i = 0; i < vertices.length; i++) {
+					batch.add(psExtremos.bind(vertices[i][0], vertices[i][1],
+							vertices[i][2]));
+				}
+				for (i = 0; i < verticesCaracteristicas.length; i++) {
+					batch.add(psCaracteristicas.bind(
+							(int) verticesCaracteristicas[i][0],
+							(int) verticesCaracteristicas[i][1],
+							verticesCaracteristicas[i][2]));
+				}
+				for (i = 0; i < clientes.length; i++) {
+					batch.add(psClientes.bind((int) clientes[i][0],
+							(int) clientes[i][1], clientes[i][2]));
+
+				}
+				getCassandraSession().execute(batch);
+			}
+		}
+		
+		public void preCargaTabla3() {
+			if (esperaConexionCassandra()) {
+				try {
+					getCassandraSession().execute("USE BD");
+				} catch (InvalidQueryException e) {
+					System.out.println("Vacia o no existe BD\n");
+					getCassandraSession()
+							.execute(
+									"CREATE KEYSPACE IF NOT EXISTS Bd WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};");
+					getCassandraSession().execute("USE Bd");
+				}
+
+				try {
+					getCassandraSession().execute(
+							"SELECT idseccion FROM Bd.vertices LIMIT 1");
+					getCassandraSession().execute("TRUNCATE Bd.vertices");
+				} catch (InvalidQueryException e) {
+					System.out.println("No habia tabla vertices Recreando\n");
+					getCassandraSession()
+							.execute(
+									"CREATE TABLE Bd.vertices (vertA int, vertB int, idseccion int PRIMARY KEY)");
+					getCassandraSession().execute(
+							"CREATE INDEX vertices_vertA ON Bd.vertices (vertA)");
+					getCassandraSession().execute(
+							"CREATE INDEX vertices_vertB ON Bd.vertices (vertB)");
+				}
+
+				try {
+					getCassandraSession()
+							.execute(
+									"SELECT idseccion FROM Bd.caracteristicasVertices LIMIT 1");
+					getCassandraSession().execute(
+							"TRUNCATE Bd.caracteristicasVertices");
+				} catch (InvalidQueryException e) {
+					System.out
+							.println("No habia tabla caracteristicasVertices Recreando\n");
+					getCassandraSession()
+							.execute(
+									"CREATE TABLE Bd.caracteristicasVertices (idseccion int PRIMARY KEY, consumoMax int, coste float)");
+				}
+
+				try {
+					getCassandraSession()
+							.execute("SELECT id FROM clientes LIMIT 1");
+					getCassandraSession().execute("TRUNCATE Bd.clientes");
+				} catch (InvalidQueryException e) {
+					getCassandraSession()
+							.execute(
+									"CREATE TABLE clientes (id int PRIMARY KEY, idseccion int,consumoActual int)");
+				}
+
+				int[][] vertices = { { 0, 0, 2 }, { 1, 0, 1 },{ 2, 1, 2 }};
+				float[][] verticesCaracteristicas = { { 0, 13438, (float) 0.5 },
+						{ 1, 15040, (float) 0.7 }, { 2, 11273, (float) 0.9 }};
+				int[][] clientes = { { 0, 1, 2039 },{ 1, 2, 2109 }};
 				BatchStatement batch = new BatchStatement();
 				PreparedStatement psExtremos = getCassandraSession()
 						.prepare(
