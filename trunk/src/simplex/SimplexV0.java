@@ -1,5 +1,7 @@
 package simplex;
 
+import java.text.DecimalFormat;
+
 /*************************************************************************
  *  Compilation:  javac Simplex.java
  *  Execution:    java Simplex
@@ -14,64 +16,80 @@ package simplex;
  *
  *************************************************************************/
 
-public class SimplexMinimizar {
+public class SimplexV0 {
     private static final double EPSILON = 1.0E-10;
-    private static final double EPSILON2 = 1.0E+10;
-    private double[][] a;   // tableaux
-    private int M;          // number of constraints
-    private int N;          // number of original variables
+    private double[][] a;   // tabla
+    private int nRes;          // number of constraints
+    private int nVarObj;          // number of original variables
 
-    private int[] basis;    // basis[i] = basic variable corresponding to row i
+    private int[] base;    // basis[i] = basic variable corresponding to row i
                             // only needed to print out solution, not book
 
-    private int nArtificiales(int[] signo){
-    	//-1 <= , 0 = , 1>=
-    	int artificiales=0;
-    	for(int i=0;i<signo.length;i++){
-    		switch(signo[i]){
-    		case -1: artificiales++; break;
-    		case 0: artificiales++;break;
-    		case 1: artificiales+=2;break;
-    		}
-    	}
-    	return artificiales;
-    }
     // sets up the simplex tableaux
-    public SimplexMinimizar(double[][] A, double[] b, double[] c,int[] signo) {
-        M = b.length;
-        N = c.length;
-        int nArtificiales = nArtificiales(signo);
-        a = new double[M+1][N+nArtificiales+1];
-        for (int i = 0; i < M; i++)
-            for (int j = 0; j < N; j++)
+    public SimplexV0(double[][] A, double[] b, double[] c) {
+        nRes = b.length;
+        nVarObj = c.length;
+        a = new double[nRes+1][nVarObj+nRes+1];
+        for (int i = 0; i < nRes; i++)
+            for (int j = 0; j < nVarObj; j++)
                 a[i][j] = A[i][j];
-        //Primero las de holgura
-        int jHolgura=0;
-        for (int i = 0; i < M; i++)	if(signo[i]==-1){a[i][N+jHolgura] = 1.0;jHolgura++;}
-        //Luego las de super
-        for (int i = 0; i < M; i++)	if(signo[i]==1){a[i][N+jHolgura] = -1.0;jHolgura++;}
-        //Luego las de artificial
-        for (int i = 0; i < M; i++)	if(signo[i]==0 || signo[i]==1){a[i][N+jHolgura] = +1.0;jHolgura++;}
+        for (int i = 0; i < nRes; i++) a[i][nVarObj+i] = 1.0;
+        for (int j = 0; j < nVarObj; j++) a[nRes][j]   = c[j];
+        for (int i = 0; i < nRes; i++) a[i][nRes+nVarObj] = b[i];
 
-        for (int j = 0; j < N; j++) a[M][j]   = c[j];
-        for (int i = 0; i < M; i++) a[i][M+N] = b[i];
+        base = new int[nRes];
+        for (int i = 0; i < nRes; i++) base[i] = nVarObj + i;
 
-        basis = new int[M];
-        for (int i = 0; i < M; i++) basis[i] = N + i;
-
-        solve();
+        resolver();
 
         // check optimality conditions
-        assert check(A, b, c);
+        assert compruebaOptimo(A, b, c);
+    }
+    
+ // sets up the simplex tableaux
+    public SimplexV0(double[][] A,int nRes, int nVarObj) {
+        this.nRes = nRes;
+        this.nVarObj = nVarObj;
+        this.a=A;
+       // a = new double[nRes+1][nVarObj+nRes+1];
+        //for (int i = 0; i < nRes; i++)
+        //    for (int j = 0; j < nVarObj; j++)
+         //       a[i][j] = A[i][j];
+        //for (int i = 0; i < nRes; i++) a[i][nVarObj+i] = 1.0;
+        //for (int j = 0; j < nVarObj; j++) a[nRes][j]   = c[j];
+        //for (int i = 0; i < nRes; i++) a[i][nRes+nVarObj] = b[i];
+
+        base = new int[nRes];
+        for (int i = 0; i < nRes; i++) base[i] = nVarObj + i;
+
+        resolver();
+
+        // check optimality conditions
+        //assert compruebaOptimo(A, b, c);
     }
 
+    public void pintaTabla(){
+    	String texto="";
+    	for(int i=0;i<a.length;i++){
+    		for(int j=0;j<a[0].length;j++){
+    			texto=texto+a[i][j]+" ";
+    		}
+    		texto=texto+"\n";
+    	}
+    	texto=texto+"\n";
+    	for(int j=0;j<base.length;j++){
+    		texto=texto+a[a.length-1][base[j]]+"("+base[j]+")"+" ";
+    	}
+    	System.out.print(texto);
+    }
+    
     // run simplex algorithm starting from initial BFS
-    private void solve() {
+    private void resolver() {
         while (true) {
 
             // find entering column q
-            int q = bland();
-            if (q == -1) break;  // optimal
+            int q = entra();
+            if (q == -1) {System.out.println("Optimo");break;}  // optimal}
 
             // find leaving row p
             int p = minRatioRule(q);
@@ -81,34 +99,60 @@ public class SimplexMinimizar {
             pivot(p, q);
 
             // update basis
-            basis[p] = q;
+            base[p] = q;
         }
     }
 
     // lowest index of a non-basic column with a positive cost
     private int bland() {
-        for (int j = 0; j < M + N; j++)
-            if (a[M][j] > 0) return j;
+        for (int j = 0; j < nRes + nVarObj; j++)
+            if (a[nRes][j] > 0) return j;
         return -1;  // optimal
+    }
+    
+    private int entra(){
+    	boolean cambiado=false;
+    	int pos=-1;
+        double cjzjpos=0;
+    	for(int j = 0; j < nRes + nVarObj; j++){
+        	double zj=0;
+        	for(int i=0;i<nRes;i++){
+        		zj=zj+a[a.length-1][base[i]]*a[i][j];
+        	}
+        	double cj=a[a.length-1][j];
+        	if(pos!=-1){   	
+        	 if ((zj-cj)>cjzjpos){
+        		 pos=j;
+        		 cambiado=true;
+        	 }
+        	}else if((zj-cj)>0){
+        	 pos=j;
+        	 cjzjpos=(zj-cj);
+        	 cambiado=true;
+        	 }
+        }
+    	
+        if(!cambiado) pos=-1;
+        return pos;  // optimal
     }
 
    // index of a non-basic column with most positive cost
     private int dantzig() {
         int q = 0;
-        for (int j = 1; j < M + N; j++)
-            if (a[M][j] > a[M][q]) q = j;
+        for (int j = 1; j < nRes + nVarObj; j++)
+            if (a[nRes][j] > a[nRes][q]) q = j;
 
-        if (a[M][q] <= 0) return -1;  // optimal
+        if (a[nRes][q] <= 0) return -1;  // optimal
         else return q;
     }
 
     // find row p using min ratio rule (-1 if no such row)
     private int minRatioRule(int q) {
         int p = -1;
-        for (int i = 0; i < M; i++) {
+        for (int i = 0; i < nRes; i++) {
             if (a[i][q] <= 0) continue;
             else if (p == -1) p = i;
-            else if ((a[i][M+N] / a[i][q]) < (a[p][M+N] / a[p][q])) p = i;
+            else if ((a[i][nRes+nVarObj] / a[i][q]) < (a[p][nRes+nVarObj] / a[p][q])) p = i;
         }
         return p;
     }
@@ -117,38 +161,38 @@ public class SimplexMinimizar {
     private void pivot(int p, int q) {
 
         // everything but row p and column q
-        for (int i = 0; i <= M; i++)
-            for (int j = 0; j <= M + N; j++)
+        for (int i = 0; i <= nRes; i++)
+            for (int j = 0; j <= nRes + nVarObj; j++)
                 if (i != p && j != q) a[i][j] -= a[p][j] * a[i][q] / a[p][q];
 
         // zero out column q
-        for (int i = 0; i <= M; i++)
+        for (int i = 0; i <= nRes; i++)
             if (i != p) a[i][q] = 0.0;
 
         // scale row p
-        for (int j = 0; j <= M + N; j++)
+        for (int j = 0; j <= nRes + nVarObj; j++)
             if (j != q) a[p][j] /= a[p][q];
         a[p][q] = 1.0;
     }
 
     // return optimal objective value
     public double value() {
-        return -a[M][M+N];
+        return -a[nRes][nRes+nVarObj];
     }
 
     // return primal solution vector
     public double[] primal() {
-        double[] x = new double[N];
-        for (int i = 0; i < M; i++)
-            if (basis[i] < N) x[basis[i]] = a[i][M+N];
+        double[] x = new double[nVarObj];
+        for (int i = 0; i < nRes; i++)
+            if (base[i] < nVarObj) x[base[i]] = a[i][nRes+nVarObj];
         return x;
     }
 
     // return dual solution vector
     public double[] dual() {
-        double[] y = new double[M];
-        for (int i = 0; i < M; i++)
-            y[i] = -a[M][N+i];
+        double[] y = new double[nRes];
+        for (int i = 0; i < nRes; i++)
+            y[i] = -a[nRes][nVarObj+i];
         return y;
     }
 
@@ -166,9 +210,9 @@ public class SimplexMinimizar {
         }
 
         // check that Ax <= b
-        for (int i = 0; i < M; i++) {
+        for (int i = 0; i < nRes; i++) {
             double sum = 0.0;
-            for (int j = 0; j < N; j++) {
+            for (int j = 0; j < nVarObj; j++) {
                 sum += A[i][j] * x[j];
             }
             if (sum > b[i] + EPSILON) {
@@ -193,9 +237,9 @@ public class SimplexMinimizar {
         }
 
         // check that yA >= c
-        for (int j = 0; j < N; j++) {
+        for (int j = 0; j < nVarObj; j++) {
             double sum = 0.0;
-            for (int i = 0; i < M; i++) {
+            for (int i = 0; i < nRes; i++) {
                 sum += A[i][j] * y[i];
             }
             if (sum < c[j] - EPSILON) {
@@ -228,29 +272,38 @@ public class SimplexMinimizar {
         return true;
     }
 
-    private boolean check(double[][]A, double[] b, double[] c) {
+    private boolean compruebaOptimo(double[][]A, double[] b, double[] c) {
         return isPrimalFeasible(A, b) && isDualFeasible(A, c) && isOptimal(b, c);
     }
 
     // print tableaux
     public void show() {
-        System.out.println("M = " + M);
-        System.out.println("N = " + N);
-        for (int i = 0; i <= M; i++) {
-            for (int j = 0; j <= M + N; j++) {
+        System.out.println("M = " + nRes);
+        System.out.println("N = " + nVarObj);
+        for (int i = 0; i <= nRes; i++) {
+            for (int j = 0; j <= nRes + nVarObj; j++) {
                 System.out.printf("%7.2f ", a[i][j]);
             }
             System.out.println();
         }
         System.out.println("value = " + value());
-        for (int i = 0; i < M; i++)
-            if (basis[i] < N) System.out.println("x_" + basis[i] + " = " + a[i][M+N]);
+        for (int i = 0; i < nRes; i++)
+            if (base[i] < nVarObj) System.out.println("x_" + base[i] + " = " + a[i][nRes+nVarObj]);
         System.out.println();
     }
 
+    public void imprime(){
+    	System.out.println("value = " + -1*this.value());
+        double[] x = this.primal();
+        for (int i = 0; i < x.length; i++)
+            System.out.println("x[" + i + "] = " + x[i]);
+        double[] y = this.dual();
+        for (int j = 0; j < y.length; j++)
+            System.out.println("y[" + j + "] = " + y[j]);
+    }
 
-    public static void test(double[][] A, double[] b, double[] c,int[] signo) {
-        SimplexMinimizar lp = new SimplexMinimizar(A, b, c,signo);
+    private static void test(double[][] A, double[] b, double[] c) {
+        SimplexV0 lp = new SimplexV0(A, b, c);
         System.out.println("value = " + lp.value());
         double[] x = lp.primal();
         for (int i = 0; i < x.length; i++)
@@ -258,70 +311,85 @@ public class SimplexMinimizar {
         double[] y = lp.dual();
         for (int j = 0; j < y.length; j++)
             System.out.println("y[" + j + "] = " + y[j]);
+        lp.pintaTablaPreSimplex();
     }
 
     public static void test1() {
         double[][] A = {
-            { -1,  1,  0 },
-            {  1,  4,  0 },
-            {  2,  1,  0 },
-            {  3, -4,  0 },
-            {  0,  0,  1 },
+            {1,0,0,0,0,0},
+            {0,0,0,0,1,-1},
+            {1,0,0,0,1,0},
+            {2039,0,0,0,0,0},
+            {0,0,0,0,2039,0},
+            {0,0,0,0,0,2039},
+            {1,0,0,0,0,0},
+            {0,1,0,0,0,0},
+            {0,0,1,0,0,0},
+            {0,0,0,1,0,0},
+            {0,0,0,0,1,0},
+            {0,0,0,0,0,1}
         };
-        double[] c = { 1, 1, 1 };
-        double[] b = { 5, 45, 27, 24, 4 };
-        //test(A, b, c);
+        double[] c = {-1427.3,0,0,0,-1835.1,-1019.5};
+        double[] b = {1,0,1,15040,11273,13438,1,1,1,1,1,1};
+        test(A, b, c);
     }
-
-    public static void testalex() {
-        double[][] A = {
-            { 6,  3 },
-            {  1,  2 },
-            {  2,  2}
-        };
-        double[] c = { 30, 25};
-        double[] b = { 420, 140, 160 };
-        int[] signo = {-1,0,1}; //-1 <= , 0 = , 1>=
-        test(A, b, c,signo);
-    }
-
-    // x0 = 12, x1 = 28, opt = 800
-    public static void test2() {
-        double[] c = {  13.0,  23.0 };
-        double[] b = { 480.0, 160.0, 1190.0 };
-        double[][] A = {
-            {  5.0, 15.0 },
-            {  4.0,  4.0 },
-            { 35.0, 20.0 },
-        };
-        //test(A, b, c);
-    }
-
-    // unbounded
-    public static void test3() {
-        double[] c = { 2.0, 3.0, -1.0, -12.0 };
-        double[] b = {  3.0,   2.0 };
-        double[][] A = {
-            { -2.0, -9.0,  1.0,  9.0 },
-            {  1.0,  1.0, -1.0, -2.0 },
-        };
-        //test(A, b, c);
-    }
-
-    // degenerate - cycles if you choose most positive objective function coefficient
-    public static void test4() {
-        double[] c = { 10.0, -57.0, -9.0, -24.0 };
-        double[] b = {  0.0,   0.0,  1.0 };
-        double[][] A = {
-            { 0.5, -5.5, -2.5, 9.0 },
-            { 0.5, -1.5, -0.5, 1.0 },
-            { 1.0,  0.0,  0.0, 0.0 },
-        };
-        
-        //test(A, b, c);
-    }
-
-
+    
+    public void pintaTablaPreSimplex(){
+		int i=0;
+		int longitudNumeroActual=0;
+		for(i=0;i<a[0].length;i++){
+			if(i<this.nVarObj) System.out.print("x"); else System.out.print("y");
+			System.out.print(i);
+			longitudNumeroActual=logitudNumero(i);
+			if(longitudNumeroActual<7){
+				for(int t=longitudNumeroActual;t<7;t++){
+					System.out.print(" ");						
+				}
+			
+			}
+		}
+		System.out.println();
+		DecimalFormat df = new DecimalFormat("#0.0#");
+		for(i=0;i<a.length;i++){
+			for(int j=0;j<a[0].length;j++){
+				if(a[i][j]!=EPSILON){
+					longitudNumeroActual=logitudNumero(a[i][j]);
+					System.out.print(df.format(a[i][j]));
+					}else{
+						System.out.print("-M");
+						longitudNumeroActual=-1;
+				}
+				if(a[i][j]<0) longitudNumeroActual++;
+				if(longitudNumeroActual<5&&j<(a[0].length-2)){
+					for(int t=longitudNumeroActual;t<5;t++){
+						System.out.print(" ");						
+					}
+					
+				}else if(longitudNumeroActual<5&&j<(a[0].length-1)){
+					for(int t=longitudNumeroActual;t<5;t++){
+						System.out.print(" ");						
+					}
+				}
+				System.out.print(" ");
+			}
+			System.out.print("\n");
+		}
+	}
+	
+	private int logitudNumero(double nf)
+	{
+		int n=(int)nf;
+		int l=0;
+		if(n>0||n<0){
+		n=Math.abs(n);
+		for (l=0;n>0;++l)
+			n/=10;
+		}else{
+			l=1;
+		}
+		//System.out.println("longitud:"+l);
+		return l;			
+	}
 
     // test client
     public static void main(String[] args) {
@@ -343,7 +411,7 @@ public class SimplexMinimizar {
         System.out.println("--------------------------------");
         */
         
-        try                           { testalex();             }
+        try                           { test1();             }
         catch (ArithmeticException e) { e.printStackTrace(); }
         System.out.println("--------------------------------");
 

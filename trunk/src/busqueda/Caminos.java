@@ -113,7 +113,7 @@ public class Caminos {
 	}
 
 	public Camino getUltimoCaminoNoFinalizadoNiVisitando(){
-		System.out.println("Entrada getUltimoCaminoNoFinalizadoNiVisitando");
+		//System.out.println("Entrada getUltimoCaminoNoFinalizadoNiVisitando");
 		boolean encontradoUno=false;
 		int i=listaCaminos.size();
 		int micopiai;
@@ -147,7 +147,7 @@ public class Caminos {
 				//}
 			}
 	   if(!encontradoUno) caminoFinal=null;
-	   System.out.println("Sale getUltimoCaminoNoFinalizadoNiVisitando");
+	   //System.out.println("Sale getUltimoCaminoNoFinalizadoNiVisitando");
 	   return caminoFinal;
 	}
 	
@@ -179,7 +179,7 @@ public class Caminos {
 	}
 	
 	public boolean isVerticeVisitadoDelCamino(Camino ultimoCamino, int vertice){
-		System.out.println("Entrada isVerticeVisitadoDelCamino");
+		//System.out.println("Entrada isVerticeVisitadoDelCamino");
 		boolean visitada=false;
 		int i=-1;
 		int micopiai;
@@ -201,12 +201,12 @@ public class Caminos {
 				}
 			}
 		}
-		System.out.println("Sale isVerticeVisitadoDelCamino");
+		//System.out.println("Sale isVerticeVisitadoDelCamino");
 		return visitada;
 	}
 	
 	public boolean isFinalizados(){
-		System.out.println("Entrada isVerticeVisitadoDelCamino");
+		//System.out.println("Entrada isVerticeVisitadoDelCamino");
 		boolean finalizados=true;
 		int i=-1;
 		int micopiai;
@@ -227,7 +227,7 @@ public class Caminos {
 			
 			//}
 		 }
-		System.out.println("Sale isVerticeVisitadoDelCamino");
+		//System.out.println("Sale isVerticeVisitadoDelCamino");
 		return finalizados;
 	}}
 

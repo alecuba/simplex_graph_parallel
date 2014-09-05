@@ -42,7 +42,7 @@ public class Secciones {
   } 
   
   private int[] buscaPosSiExiste(int idSeccion, int vertA, int vertB){
-	  System.out.println("Entra busca pos idSeccion:"+idSeccion+" vertA"+vertA+" vertB"+vertB);
+	  //System.out.println("Entra busca pos idSeccion:"+idSeccion+" vertA"+vertA+" vertB"+vertB);
 	  int posEncontrado[]=new int[2];
 	  posEncontrado[0]=-1;
 	  posEncontrado[1]=0;//0 normal al guardado //1 inverso
@@ -58,7 +58,7 @@ public class Secciones {
 				 micopiai=i;				 
 				//}
 				if(micopiai<secciones.size()){
-					 System.out.println("1 "+jomp.runtime.OMP.getThreadNum());
+					 //System.out.println("1 "+jomp.runtime.OMP.getThreadNum());
 					 Seccion seccion=((Seccion)secciones.get(micopiai));
 					if(seccion!=null&&seccion.idSeccion==idSeccion){
 						if(seccion.vertA == vertA && seccion.vertB == vertB) {
@@ -76,13 +76,13 @@ public class Secciones {
 						}
 					}
 				}
-				 System.out.println("3 "+jomp.runtime.OMP.getThreadNum()+" "+jomp.runtime.OMP.getNumThreads());
+				 //System.out.println("3 "+jomp.runtime.OMP.getThreadNum()+" "+jomp.runtime.OMP.getNumThreads());
 				 
-				 System.out.println("4 "+jomp.runtime.OMP.getThreadNum());
+				 //System.out.println("4 "+jomp.runtime.OMP.getThreadNum());
 			  //}
 		  } 
 	  }
-	  System.out.println("Sale busca pos");
+	  //System.out.println("Sale busca pos");
 	  return posEncontrado;
   }
   
