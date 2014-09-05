@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.RejectedExecutionException;
 
+import simplex.SimplexV0;
 import linealizacion.PreparaLineal;
 import busqueda.Caminos;
 import busqueda.RecorreGrafo;
@@ -150,9 +151,11 @@ public class Gestor{
 						System.out.println("\nNumero Threads utilizados:"+jomp.runtime.OMP.getMaxThreads()+" tiempo("+(tiempo/1000F)+")");
 						if(!secciones.rellenaCaracteristicas(this)){
 							//Linealizar
-							PreparaLineal lineal = new PreparaLineal(this);
+							PreparaLineal lineal = new PreparaLineal(this,debug);
 							lineal.creaTablaPreSimplex(caminos,secciones);
-							lineal.pintaTablaPreSimplex();
+							SimplexV0 simplex = new SimplexV0(lineal.getTabla(),lineal.getNumRestricciones(),lineal.getNumVarsObjetivo());
+							simplex.imprime();
+							simplex.pintaTablaPreSimplex();
 							//simplex
 						}
 						}else{
@@ -448,9 +451,12 @@ public class Gestor{
 				}
 
 				int[][] vertices = { { 0, 0, 2 }, { 1, 0, 1 },{ 2, 1, 2 }};
-				float[][] verticesCaracteristicas = { { 0, 13438, (float) 0.5 },
-						{ 1, 15040, (float) 0.7 }, { 2, 11273, (float) 0.9 }};
-				int[][] clientes = { { 0, 1, 2039 },{ 1, 2, 2109 }};
+				//int[][] vertices = { { 0, 0, 2 }, { 1, 0, 1 },{ 2, 2, 3 },{ 3, 3, 1 }};
+				//float[][] verticesCaracteristicas = { { 0, 13438, (float) 0.5 },{ 1, 15040, (float) 0.7 }, { 2, 11273, (float) 0.9 },{ 3, 10273, (float) 0.6 }};
+				float[][] verticesCaracteristicas = { { 0, 13438, (float) 0.5 },{ 1, 15040, (float) 0.7 }, { 2, 11273, (float) 0.9 }};
+				//int[][] clientes = { { 0, 1, 2039 },{ 1, 2, 2109 },{ 2, 2, 3109 }};
+				//int[][] clientes = { { 0, 1, 2039 },{ 1, 2, 2109 }};
+				int[][] clientes = { { 0, 1, 2039 }};
 				BatchStatement batch = new BatchStatement();
 				PreparedStatement psExtremos = getCassandraSession()
 						.prepare(

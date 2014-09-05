@@ -20,10 +20,13 @@ import comun.Gestor;
 
 public class PreparaLineal {
 	private ArrayList<ArrayList<Float>> seccionesTemp=new ArrayList<ArrayList<Float>>();
-	
-	public PreparaLineal(Gestor gestor){
+	  private static final double EPSILON = 1.0E+10;
+	  private static final double IGUAL=4;
+	  private static final double MENORIGUAL=5;
+	  private static final double MAYORIGUAL=6;
+	public PreparaLineal(Gestor gestor,boolean debug){
 		this.gestor=gestor;
-
+		this.debug=debug;
 		//while(caminos.iterator().hasNext()){
 			//Camino camino= caminos.iterator().next();
 			//agregaSecciones(camino.idcamino,camino.vertices);
@@ -86,11 +89,14 @@ public class PreparaLineal {
 		return existe;
 	}
 
-	private float[][] preTabla;
-	private int bloque;
+	private double[][] preTabla;
+	private int numeroSecciones;
 	private Gestor gestor;
 	private int numeroClientes;
 	private int numeroCaminos;
+	private int numeroRestricciones;
+	private int numeroVarsObjetivo;
+	private boolean debug;
 	
 	private int getConsumoCliente(int idcliente){
 		int consumo=0;
@@ -117,59 +123,89 @@ public class PreparaLineal {
 			  }
 		return consumo;
 	}
-	
-	
+
 	public void creaTablaPreSimplex(Caminos caminos, Secciones secciones) {
-		bloque = secciones.secciones.size();
+		numeroSecciones = secciones.secciones.size();
 		numeroClientes=cuentaNumClientes(caminos);
 		numeroCaminos=caminos.listaCaminos.size();
-		preTabla = new float[numeroCaminos+numeroClientes+bloque+1][numeroCaminos*bloque+2];
+		numeroRestricciones=numeroCaminos+numeroClientes+numeroSecciones;//una restriccion por camino + una restriccion de un camino por cliente + restriccion de consumo cada camino + funcion objetivo
+		numeroVarsObjetivo=numeroCaminos*numeroSecciones;//Numero de caminos * numero de secciones = total variables
+		System.out.println("NumeroClientes:"+numeroClientes+" NumeroCaminos:"+numeroCaminos+" bloque:"+numeroSecciones);
+		preTabla = new double[numeroRestricciones+1][numeroVarsObjetivo+numeroRestricciones+2];
+		//preTabla = new float[numeroCaminos+numeroClientes+numeroSecciones+1][numeroCaminos*numeroSecciones+2];
 		boolean agregadoRest1camino;
-		int numeroSecciones=0;
-		int posIniRestricciones1camino=caminos.listaCaminos.size();
-		for(int i=0;i<caminos.listaCaminos.size();i++){
+		int numeroSeccionesDeUnCamino=0;
+		int posIniRestricciones1camino=numeroCaminos;
+		int multiplicador=1;
+		for(int i=0;i<numeroCaminos;i++){
 			agregadoRest1camino=false;
-			numeroSecciones=0;
-			for(int j=0;j<bloque;j++){
+			numeroSeccionesDeUnCamino=0;
+			multiplicador=1;
+			for(int j=0;j<numeroSecciones;j++){
 				if(existeSeccionEnCamino(((Camino)caminos.listaCaminos.get(i)).idsecciones,j)){
 					//Agrego la seccion a la restriccion de maxmin 1 camino por cliente si no se ha añadido ya
 					if(!agregadoRest1camino){
-						 preTabla[posIniRestricciones1camino][i*bloque+j]=1;
+						 preTabla[posIniRestricciones1camino][i*numeroSecciones+j]=1;
+						 //marco =
+						 preTabla[posIniRestricciones1camino][preTabla[0].length-2]=IGUAL;
 						 agregadoRest1camino=true;
 					}
-					//Utilizo esta seccion
-					preTabla[i][i*bloque+j]=1;
+					//Utilizo esta seccion X1=X2=X3
+					preTabla[i][i*numeroSecciones+j]=1*multiplicador;
+					multiplicador=multiplicador*-1;//Para cuando tenemos X1=X2=X3 -> X1-X2+X3=0
 					//Limites de consumo de cada seccion
-					preTabla[numeroCaminos+numeroClientes+j][i*bloque+j]=getConsumoCliente(((Camino)caminos.listaCaminos.get(i)).idcliente);
-					preTabla[numeroCaminos+numeroClientes+j][preTabla[0].length-2]=-1;
-					preTabla[numeroCaminos+numeroClientes+j][preTabla[0].length-1]=secciones.getLimiteSeccion(j);
-					//Coste de usar cada sección en funcion objetivo
-					preTabla[preTabla.length-1][i*bloque+j]=getConsumoCliente(((Camino)caminos.listaCaminos.get(i)).idcliente) * secciones.getCosteSeccion(j);
+					preTabla[numeroCaminos+numeroClientes+j][i*numeroSecciones+j]=getConsumoCliente(((Camino)caminos.listaCaminos.get(i)).idcliente);
+					preTabla[numeroCaminos+numeroClientes+j][preTabla[0].length-1]=secciones.getLimiteSeccion(j);//Total del limite de una seccion
+					preTabla[numeroCaminos+numeroClientes+j][preTabla[0].length-2]=MENORIGUAL;
+					preTabla[numeroCaminos+numeroClientes+j][(numeroCaminos*numeroSecciones)+numeroCaminos+numeroClientes+j]=1;//Variable holgura restricciones de cada limite de cada seccion
+					//Coste de usar cada sección en funcion objetivo (multiplicado por -1 por usar maximizar)
+					preTabla[preTabla.length-1][i*numeroSecciones+j]=-1*getConsumoCliente(((Camino)caminos.listaCaminos.get(i)).idcliente) * secciones.getCosteSeccion(j);
 					//Sirve para calcular las secciones que hay en un camino en total , para si se marca una seccion de ese camino obligue a marcar todos
-					numeroSecciones++;
+					numeroSeccionesDeUnCamino++;
 				}
-				
-				if((((i+1)<numeroCaminos)&&((Camino)caminos.listaCaminos.get(i)).idcliente!=((Camino)caminos.listaCaminos.get(i+1)).idcliente)&&j==(bloque-1)
+				//Cuando cambia de cliente o termina todos los caminos, pon el limite de un camino por cliente
+				if((((i+1)<numeroCaminos)&&((Camino)caminos.listaCaminos.get(i)).idcliente!=((Camino)caminos.listaCaminos.get(i+1)).idcliente)&&j==(numeroSecciones-1)
 						||
-						j==(bloque-1)&&i==caminos.listaCaminos.size()-1){//Cambiamos de cliente debemos añadir las restricciones del camino del cliente
-				  //iguala al total
-					preTabla[posIniRestricciones1camino][preTabla[0].length-2]=0;
+					j==(numeroSecciones-1)&&i==numeroCaminos-1){//Cambiamos de cliente debemos añadir las restricciones del camino del cliente
+					//iguala al total
 					preTabla[posIniRestricciones1camino][preTabla[0].length-1]=1;
-					if(i+1<caminos.listaCaminos.size()-1){
-					System.out.println("entro para i"+i+", j"+j+ " comparacion id cliente:"+(((Camino)caminos.listaCaminos.get(i)).idcliente!=((Camino)caminos.listaCaminos.get(i+1)).idcliente));
-					
-					posIniRestricciones1camino++;
+					preTabla[posIniRestricciones1camino][(numeroCaminos*numeroSecciones)+numeroCaminos+posIniRestricciones1camino-numeroCaminos]=1;
+					//preTabla[preTabla.length-1][(numeroCaminos*numeroSecciones)+numeroCaminos+posIniRestricciones1camino-numeroCaminos]=(double) EPSILON;
+					if(i+1<caminos.listaCaminos.size()-1){			
+						posIniRestricciones1camino++;
 					}
 				}
 			}
-			preTabla[i][preTabla[0].length-2]=0;
-			preTabla[i][preTabla[0].length-1]=numeroSecciones;
-		}
+			//Marco la variable de holgura correspondiente al camino actual
+			preTabla[i][numeroCaminos*numeroSecciones+i]=1;
+			//preTabla[preTabla.length-1][numeroCaminos*numeroSecciones+i]=(float) EPSILON;
+			//Pongo el total de secciones que tiene que tener el camino actual
+			if(numeroSeccionesDeUnCamino>1) {
+				preTabla[i][preTabla[0].length-1]=0;
+				preTabla[i][preTabla[0].length-2]=IGUAL;
+				//preTabla[preTabla.length-1][(numeroCaminos*numeroSecciones)+i]=(double) EPSILON;
+				//preTabla[i][(numeroCaminos*numeroSecciones)+i]=-1;
+				} else{ 
+					preTabla[i][preTabla[0].length-1]=1;
+					preTabla[i][preTabla[0].length-2]=MENORIGUAL;
+					}
+		}//Fin for camino
+		if(debug) pintaTablaPreSimplexSimbolo();
+		acondicionaTabla();
+		if(debug) pintaTablaPreSimplexFinal();
 	}
 	
-	public void transformaAtablaSimplex(){
-		
+	public int getNumRestricciones(){
+		return this.numeroRestricciones;
 	}
+	public int getNumVarsObjetivo(){
+		return this.numeroVarsObjetivo;
+	}
+	
+	public double[][] getTabla(){
+		return this.preTabla;
+	}
+	
 	
 	private int mod(int x, int y)
 	{
@@ -181,42 +217,48 @@ public class PreparaLineal {
 	    return result;
 	}
 	
-	public void pintaTablaPreSimplex(){
-		//enunciado
-		for(int i=0;i<preTabla[0].length;i++){
-			if(i==(preTabla[0].length-2)){
-				System.out.print("s     ");
-			} else if(i==(preTabla[0].length-1)){
-				System.out.print("c");
-			}else{
-				System.out.print(i/bloque+"/"+mod(i,bloque)+"    ");
-			}
-		}
-		System.out.println();
-		int longitudNumeroActual=0;
-		DecimalFormat df = new DecimalFormat("#0.0#");
+	private void acondicionaTabla(){
 		for(int i=0;i<preTabla.length;i++){
-			for(int j=0;j<preTabla[0].length;j++){
-				System.out.print(df.format(preTabla[i][j]));
-				longitudNumeroActual=logitudNumero(preTabla[i][j]);
-				if(preTabla[i][j]<0) longitudNumeroActual++;
-				if(longitudNumeroActual<4&&j<(preTabla[0].length-2)){
-					for(int t=longitudNumeroActual;t<4;t++){
-						System.out.print(" ");						
-					}
-					
-				}else if(longitudNumeroActual<2&&j<(preTabla[0].length-1)){
-					for(int t=longitudNumeroActual;t<2;t++){
-						System.out.print(" ");						
-					}
-				}
-				System.out.print(" ");
-			}
-			System.out.print("\n");
+		    if(preTabla[i][preTabla[0].length-2]==IGUAL){
+		    	//Añadir una columna en preTabla[0].length-2
+		    	preTabla=agregaColumna(preTabla);
+		    	preTabla[i][preTabla[0].length-3]=+1;
+		    	//Añadir una restriccion -M en preTabla[preTabla.length-1][preTabla[0].length-2]=EPSILON
+		    	preTabla[preTabla.length-1][preTabla[0].length-3]=+EPSILON;
+		    }
 		}
+		preTabla=quitaColumnaSimbolo(preTabla);
 	}
 	
-	private int logitudNumero(float nf)
+	private double[][] quitaColumnaSimbolo(double[][] tablain){
+		double[][] tablaout=new double[tablain.length][tablain[0].length-1];
+		for(int i=0;i<tablain.length;i++){
+			for(int j=0;j<tablain[0].length;j++){
+				if(j<tablain[0].length-2){
+				 tablaout[i][j]=tablain[i][j];
+				}else if(j==tablain[0].length-1){
+				tablaout[i][j-1]=tablain[i][j];
+				}
+			}
+		}
+		return tablaout;
+	}
+	
+	private double[][] agregaColumna(double[][] tablain){
+		double[][] tablaout=new double[tablain.length][tablain[0].length+1];
+		for(int i=0;i<tablain.length;i++){
+			for(int j=0;j<tablain[0].length;j++){
+				if(j==tablain[0].length-1||j==tablain[0].length-2){
+				 tablaout[i][j+1]=tablain[i][j];
+				}else{
+				 tablaout[i][j]=tablain[i][j];
+				}
+			}
+		}
+		return tablaout;
+	}
+	
+	private int logitudNumero(double nf)
 	{
 		int n=(int)nf;
 		int l=0;
@@ -230,4 +272,125 @@ public class PreparaLineal {
 		//System.out.println("longitud:"+l);
 		return l;			
 	}
+	
+	public void pintaTablaPreSimplexFinal(){
+		int i=0;
+		int longitudNumeroActual=0;
+		for(i=0;i<preTabla[0].length;i++){
+			System.out.print(i);
+			longitudNumeroActual=logitudNumero(i);
+			if(longitudNumeroActual<8){
+				for(int t=longitudNumeroActual;t<8;t++){
+					System.out.print(" ");						
+				}
+			
+			}
+		}
+		System.out.println();
+		//enunciado
+		for(i=0;i<preTabla[0].length;i++){
+			if(i>=numeroCaminos*numeroSecciones&&i<(preTabla[0].length-1)){
+				System.out.print("art"+(i-numeroCaminos*numeroSecciones)+"    ");
+			} else if(i==(preTabla[0].length-1)){
+				System.out.print("c");
+			}else{
+				System.out.print(i/numeroSecciones+"/"+mod(i,numeroSecciones)+"     ");
+			}
+		}
+		System.out.println();
+		DecimalFormat df = new DecimalFormat("#0.0#");
+		for(i=0;i<preTabla.length;i++){
+			for(int j=0;j<preTabla[0].length;j++){
+				if(preTabla[i][j]!=-EPSILON){
+					longitudNumeroActual=logitudNumero(preTabla[i][j]);
+					System.out.print(df.format(preTabla[i][j]));
+					}else if(j!=preTabla[0].length-1){
+						System.out.print("-M");
+						longitudNumeroActual=-1;
+				}
+				if(preTabla[i][j]<0) longitudNumeroActual++;
+				if(longitudNumeroActual<5&&j<(preTabla[0].length-2)){
+					for(int t=longitudNumeroActual;t<5;t++){
+						System.out.print(" ");						
+					}
+					
+				}else if(longitudNumeroActual<3&&j<(preTabla[0].length-1)){
+					for(int t=longitudNumeroActual;t<3;t++){
+						System.out.print(" ");						
+					}
+				}
+				System.out.print(" ");
+			}
+			System.out.print("\n");
+		}
+	}
+	
+	
+	public void pintaTablaPreSimplexSimbolo(){
+		int i=0;
+		int longitudNumeroActual=0;
+		for(i=0;i<preTabla[0].length;i++){
+			System.out.print(i);
+			longitudNumeroActual=logitudNumero(i);
+			if(longitudNumeroActual<8){
+				for(int t=longitudNumeroActual;t<8;t++){
+					System.out.print(" ");						
+				}
+			
+			}
+		}
+		System.out.println();
+		//enunciado
+		for(i=0;i<preTabla[0].length;i++){
+			if(i>=numeroCaminos*numeroSecciones&&i<(preTabla[0].length-2)){
+				System.out.print("art"+(i-numeroCaminos*numeroSecciones)+"    ");
+			} else if(i==(preTabla[0].length-1)){
+				System.out.print("c");
+			}else if(i==(preTabla[0].length-2)){
+				System.out.print("s       ");
+			}else{
+				System.out.print(i/numeroSecciones+"/"+mod(i,numeroSecciones)+"     ");
+			}
+		}
+		System.out.println();
+		DecimalFormat df = new DecimalFormat("#0.0#");
+		for(i=0;i<preTabla.length;i++){
+			for(int j=0;j<preTabla[0].length;j++){
+				if(preTabla[i][j]!=-EPSILON&&(j!=preTabla[0].length-2||i==preTabla.length-1)){
+					longitudNumeroActual=logitudNumero(preTabla[i][j]);
+					System.out.print(df.format(preTabla[i][j]));
+					}else if(j!=preTabla[0].length-2){
+						System.out.print("-M");
+						longitudNumeroActual=-1;
+				}else{
+					if(preTabla[i][j]==IGUAL){
+					System.out.print("=");
+					longitudNumeroActual=-2;
+					}
+					if(preTabla[i][j]==5){
+						longitudNumeroActual=-1;
+						System.out.print("<=");
+					}
+					if(preTabla[i][j]==6){
+						longitudNumeroActual=-1;
+						System.out.print(">=");						
+					}
+				}
+				if(preTabla[i][j]<0) longitudNumeroActual++;
+				if(longitudNumeroActual<5&&j<(preTabla[0].length-2)){
+					for(int t=longitudNumeroActual;t<5;t++){
+						System.out.print(" ");						
+					}
+					
+				}else if(longitudNumeroActual<3&&j<(preTabla[0].length-1)){
+					for(int t=longitudNumeroActual;t<3;t++){
+						System.out.print(" ");						
+					}
+				}
+				System.out.print(" ");
+			}
+			System.out.print("\n");
+		}
+	}
+	
 }

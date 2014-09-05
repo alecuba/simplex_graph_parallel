@@ -6,6 +6,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -27,6 +28,7 @@ import javax.swing.JTextField;
 import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.text.DefaultCaret;
 
 import mpi.MPI;
@@ -59,6 +61,10 @@ public class Principal {
 	private JCheckBoxMenuItem chckbxmntmBDTest200;
 	private JCheckBoxMenuItem chckbxmntmBDTest400;
 	private int tablaNum = 50;
+	private boolean muestraLog=false;
+	private JTextArea textArea;
+	private JScrollPane scroll;
+	private DefaultCaret caret;
 
 	/**
 	 * Launch the application.
@@ -95,7 +101,7 @@ public class Principal {
 		
 		jomp.runtime.OMP.setNumThreads(4);
 		initialize();
-		//ActualizaMemoria.start();
+		ActualizaMemoria.start();
 	}
 
 	Thread ActualizaMemoria = new Thread() {
@@ -126,6 +132,7 @@ public class Principal {
 	private void initialize() {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 640, 700);
+		if(this.muestraLog) frame.setBounds(100, 100, 640, 700); else frame.setBounds(100, 100, 640, 250);
 		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frame.addWindowListener(new WindowListener() {
 			public void windowClosing(WindowEvent e) {
@@ -387,6 +394,36 @@ public class Principal {
 						.getModel().isSelected());
 			}
 		});
+		
+		JCheckBoxMenuItem chckbxmntmMuestraLog = new JCheckBoxMenuItem("Muestra Log");
+		chckbxmntmMuestraLog.setSelected(this.muestraLog);
+		mnOpciones.add(chckbxmntmMuestraLog);
+		chckbxmntmMuestraLog.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(((AbstractButton) e.getSource()).getModel().isSelected()){
+					Principal.this.muestraLog=true;
+					Principal.this.frame.setBounds(100, 100, 640, 700);
+					textArea.setVisible(true);
+					caret.setVisible(true);
+					scroll.setVisible(true);
+					Principal.this.sysOut=System.out;
+					JTextAreaOutputStream out = new JTextAreaOutputStream(textArea);
+					System.setOut(new PrintStream(out));
+					try {
+					        System.setOut(new PrintStream(new File("C://history.txt")));
+					    } catch (Exception err) {
+					         err.printStackTrace();
+					    }					 
+				}else{
+					Principal.this.muestraLog=true;
+					Principal.this.frame.setBounds(100, 100, 640, 250);
+					textArea.setVisible(false);
+					caret.setVisible(false);
+					scroll.setVisible(false);
+					System.setOut(Principal.this.sysOut);
+				}
+			}
+		});
 
 		JCheckBoxMenuItem chckbxmntmAutoInserta = new JCheckBoxMenuItem(
 				"Auto inserta");
@@ -626,10 +663,13 @@ public class Principal {
 			}
 		});
 
-		final JTextArea textArea = new JTextArea();
-		DefaultCaret caret = (DefaultCaret) textArea.getCaret();
+		textArea = new JTextArea();
+		textArea.setVisible(this.muestraLog);
+		caret = (DefaultCaret) textArea.getCaret();
+		caret.setVisible(this.muestraLog);
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-		JScrollPane scroll = new JScrollPane(textArea);
+		scroll = new JScrollPane(textArea);
+		scroll.setVisible(muestraLog);
 		scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
 		frame.getContentPane().add(scroll, BorderLayout.SOUTH);
@@ -638,8 +678,15 @@ public class Principal {
 		// frame.getContentPane().add(textArea, BorderLayout.SOUTH);
 		JTextAreaOutputStream out = new JTextAreaOutputStream(textArea);
 		//System.setOut(new PrintStream(out));
+		/* try {
+		        System.setOut(new PrintStream(new File("C://history.txt")));
+		    } catch (Exception e) {
+		         e.printStackTrace();
+		    }*/
 
 	}
+	
+	private PrintStream sysOut;
 	
 	private void gestionBotones(boolean estado){
 		if(estado){
