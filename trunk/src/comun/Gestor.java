@@ -155,7 +155,7 @@ public class Gestor{
 							lineal.creaTablaPreSimplex(caminos,secciones);
 							SimplexV0 simplex = new SimplexV0(lineal.getTabla(),lineal.getNumRestricciones(),lineal.getNumVarsObjetivo());
 							simplex.imprime();
-							simplex.pintaTablaPreSimplex();
+							simplex.pintaTablaPreSimplex(simplex.getTabla());
 							//simplex
 						}
 						}else{

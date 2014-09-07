@@ -21,9 +21,6 @@ import comun.Gestor;
 public class PreparaLineal {
 	private ArrayList<ArrayList<Float>> seccionesTemp=new ArrayList<ArrayList<Float>>();
 	  private static final double EPSILON = 1.0E+10;
-	  private static final double IGUAL=4;
-	  private static final double MENORIGUAL=5;
-	  private static final double MAYORIGUAL=6;
 	public PreparaLineal(Gestor gestor,boolean debug){
 		this.gestor=gestor;
 		this.debug=debug;
@@ -131,7 +128,7 @@ public class PreparaLineal {
 		numeroRestricciones=numeroCaminos+numeroClientes+numeroSecciones;//una restriccion por camino + una restriccion de un camino por cliente + restriccion de consumo cada camino + funcion objetivo
 		numeroVarsObjetivo=numeroCaminos*numeroSecciones;//Numero de caminos * numero de secciones = total variables
 		System.out.println("NumeroClientes:"+numeroClientes+" NumeroCaminos:"+numeroCaminos+" bloque:"+numeroSecciones);
-		preTabla = new double[numeroRestricciones+1][numeroVarsObjetivo+numeroRestricciones+2];
+		preTabla = new double[numeroRestricciones+(numeroCaminos*numeroSecciones)+1][numeroVarsObjetivo+numeroRestricciones+(numeroCaminos*numeroSecciones)+1];
 		//preTabla = new float[numeroCaminos+numeroClientes+numeroSecciones+1][numeroCaminos*numeroSecciones+2];
 		boolean agregadoRest1camino;
 		int numeroSeccionesDeUnCamino=0;
@@ -142,12 +139,14 @@ public class PreparaLineal {
 			numeroSeccionesDeUnCamino=0;
 			multiplicador=1;
 			for(int j=0;j<numeroSecciones;j++){
+				//Agrego restriccion de una sola xij como maximo
+				preTabla[numeroRestricciones+(i*numeroSecciones)+j][numeroSecciones*i+j]=1;
+				preTabla[numeroRestricciones+(i*numeroSecciones)+j][numeroVarsObjetivo+numeroRestricciones+numeroSecciones*i+j]=1;
 				if(existeSeccionEnCamino(((Camino)caminos.listaCaminos.get(i)).idsecciones,j)){
 					//Agrego la seccion a la restriccion de maxmin 1 camino por cliente si no se ha añadido ya
 					if(!agregadoRest1camino){
 						 preTabla[posIniRestricciones1camino][i*numeroSecciones+j]=1;
 						 //marco =
-						 preTabla[posIniRestricciones1camino][preTabla[0].length-2]=IGUAL;
 						 agregadoRest1camino=true;
 					}
 					//Utilizo esta seccion X1=X2=X3
@@ -156,7 +155,6 @@ public class PreparaLineal {
 					//Limites de consumo de cada seccion
 					preTabla[numeroCaminos+numeroClientes+j][i*numeroSecciones+j]=getConsumoCliente(((Camino)caminos.listaCaminos.get(i)).idcliente);
 					preTabla[numeroCaminos+numeroClientes+j][preTabla[0].length-1]=secciones.getLimiteSeccion(j);//Total del limite de una seccion
-					preTabla[numeroCaminos+numeroClientes+j][preTabla[0].length-2]=MENORIGUAL;
 					preTabla[numeroCaminos+numeroClientes+j][(numeroCaminos*numeroSecciones)+numeroCaminos+numeroClientes+j]=1;//Variable holgura restricciones de cada limite de cada seccion
 					//Coste de usar cada sección en funcion objetivo (multiplicado por -1 por usar maximizar)
 					preTabla[preTabla.length-1][i*numeroSecciones+j]=-1*getConsumoCliente(((Camino)caminos.listaCaminos.get(i)).idcliente) * secciones.getCosteSeccion(j);
@@ -170,28 +168,29 @@ public class PreparaLineal {
 					//iguala al total
 					preTabla[posIniRestricciones1camino][preTabla[0].length-1]=1;
 					preTabla[posIniRestricciones1camino][(numeroCaminos*numeroSecciones)+numeroCaminos+posIniRestricciones1camino-numeroCaminos]=1;
+					preTabla[preTabla.length-1][(numeroCaminos*numeroSecciones)+numeroCaminos+posIniRestricciones1camino-numeroCaminos]=EPSILON;
 					//preTabla[preTabla.length-1][(numeroCaminos*numeroSecciones)+numeroCaminos+posIniRestricciones1camino-numeroCaminos]=(double) EPSILON;
 					if(i+1<caminos.listaCaminos.size()-1){			
 						posIniRestricciones1camino++;
 					}
 				}
 			}
-			//Marco la variable de holgura correspondiente al camino actual
-			preTabla[i][numeroCaminos*numeroSecciones+i]=1;
+			
 			//preTabla[preTabla.length-1][numeroCaminos*numeroSecciones+i]=(float) EPSILON;
 			//Pongo el total de secciones que tiene que tener el camino actual
 			if(numeroSeccionesDeUnCamino>1) {
 				preTabla[i][preTabla[0].length-1]=0;
-				preTabla[i][preTabla[0].length-2]=IGUAL;
+				//Marco la variable de holgura correspondiente al camino actual
+				preTabla[i][numeroCaminos*numeroSecciones+i]=1;
+				preTabla[preTabla.length-1][numeroCaminos*numeroSecciones+i]=EPSILON;
 				//preTabla[preTabla.length-1][(numeroCaminos*numeroSecciones)+i]=(double) EPSILON;
 				//preTabla[i][(numeroCaminos*numeroSecciones)+i]=-1;
 				} else{ 
 					preTabla[i][preTabla[0].length-1]=1;
-					preTabla[i][preTabla[0].length-2]=MENORIGUAL;
+					//Marco la variable de holgura correspondiente al camino actual
+					preTabla[i][numeroCaminos*numeroSecciones+i]=1;
 					}
 		}//Fin for camino
-		if(debug) pintaTablaPreSimplexSimbolo();
-		acondicionaTabla();
 		if(debug) pintaTablaPreSimplexFinal();
 	}
 	
@@ -215,47 +214,6 @@ public class PreparaLineal {
 	        result += y;
 	    }
 	    return result;
-	}
-	
-	private void acondicionaTabla(){
-		for(int i=0;i<preTabla.length;i++){
-		    if(preTabla[i][preTabla[0].length-2]==IGUAL){
-		    	//Añadir una columna en preTabla[0].length-2
-		    	preTabla=agregaColumna(preTabla);
-		    	preTabla[i][preTabla[0].length-3]=+1;
-		    	//Añadir una restriccion -M en preTabla[preTabla.length-1][preTabla[0].length-2]=EPSILON
-		    	preTabla[preTabla.length-1][preTabla[0].length-3]=+EPSILON;
-		    }
-		}
-		preTabla=quitaColumnaSimbolo(preTabla);
-	}
-	
-	private double[][] quitaColumnaSimbolo(double[][] tablain){
-		double[][] tablaout=new double[tablain.length][tablain[0].length-1];
-		for(int i=0;i<tablain.length;i++){
-			for(int j=0;j<tablain[0].length;j++){
-				if(j<tablain[0].length-2){
-				 tablaout[i][j]=tablain[i][j];
-				}else if(j==tablain[0].length-1){
-				tablaout[i][j-1]=tablain[i][j];
-				}
-			}
-		}
-		return tablaout;
-	}
-	
-	private double[][] agregaColumna(double[][] tablain){
-		double[][] tablaout=new double[tablain.length][tablain[0].length+1];
-		for(int i=0;i<tablain.length;i++){
-			for(int j=0;j<tablain[0].length;j++){
-				if(j==tablain[0].length-1||j==tablain[0].length-2){
-				 tablaout[i][j+1]=tablain[i][j];
-				}else{
-				 tablaout[i][j]=tablain[i][j];
-				}
-			}
-		}
-		return tablaout;
 	}
 	
 	private int logitudNumero(double nf)
@@ -323,74 +281,5 @@ public class PreparaLineal {
 			}
 			System.out.print("\n");
 		}
-	}
-	
-	
-	public void pintaTablaPreSimplexSimbolo(){
-		int i=0;
-		int longitudNumeroActual=0;
-		for(i=0;i<preTabla[0].length;i++){
-			System.out.print(i);
-			longitudNumeroActual=logitudNumero(i);
-			if(longitudNumeroActual<8){
-				for(int t=longitudNumeroActual;t<8;t++){
-					System.out.print(" ");						
-				}
-			
-			}
-		}
-		System.out.println();
-		//enunciado
-		for(i=0;i<preTabla[0].length;i++){
-			if(i>=numeroCaminos*numeroSecciones&&i<(preTabla[0].length-2)){
-				System.out.print("art"+(i-numeroCaminos*numeroSecciones)+"    ");
-			} else if(i==(preTabla[0].length-1)){
-				System.out.print("c");
-			}else if(i==(preTabla[0].length-2)){
-				System.out.print("s       ");
-			}else{
-				System.out.print(i/numeroSecciones+"/"+mod(i,numeroSecciones)+"     ");
-			}
-		}
-		System.out.println();
-		DecimalFormat df = new DecimalFormat("#0.0#");
-		for(i=0;i<preTabla.length;i++){
-			for(int j=0;j<preTabla[0].length;j++){
-				if(preTabla[i][j]!=-EPSILON&&(j!=preTabla[0].length-2||i==preTabla.length-1)){
-					longitudNumeroActual=logitudNumero(preTabla[i][j]);
-					System.out.print(df.format(preTabla[i][j]));
-					}else if(j!=preTabla[0].length-2){
-						System.out.print("-M");
-						longitudNumeroActual=-1;
-				}else{
-					if(preTabla[i][j]==IGUAL){
-					System.out.print("=");
-					longitudNumeroActual=-2;
-					}
-					if(preTabla[i][j]==5){
-						longitudNumeroActual=-1;
-						System.out.print("<=");
-					}
-					if(preTabla[i][j]==6){
-						longitudNumeroActual=-1;
-						System.out.print(">=");						
-					}
-				}
-				if(preTabla[i][j]<0) longitudNumeroActual++;
-				if(longitudNumeroActual<5&&j<(preTabla[0].length-2)){
-					for(int t=longitudNumeroActual;t<5;t++){
-						System.out.print(" ");						
-					}
-					
-				}else if(longitudNumeroActual<3&&j<(preTabla[0].length-1)){
-					for(int t=longitudNumeroActual;t<3;t++){
-						System.out.print(" ");						
-					}
-				}
-				System.out.print(" ");
-			}
-			System.out.print("\n");
-		}
-	}
-	
+	}	
 }
