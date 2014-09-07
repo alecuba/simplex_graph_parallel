@@ -18,6 +18,7 @@ import java.text.DecimalFormat;
 
 public class SimplexV0 {
     private static final double EPSILON = 1.0E-10;
+    private static final double EPSILON2 = 1.0E+10;
     private double[][] a;   // tabla
     private int nRes;          // number of constraints
     private int nVarObj;          // number of original variables
@@ -93,7 +94,8 @@ public class SimplexV0 {
 
             // find leaving row p
             int p = minRatioRule(q);
-            if (p == -1) throw new ArithmeticException("Linear program is unbounded");
+            if (p == -1) break;
+            //if (p == -1) throw new ArithmeticException("Linear program is unbounded");
 
             // pivot
             pivot(p, q);
@@ -121,19 +123,29 @@ public class SimplexV0 {
         	}
         	double cj=a[a.length-1][j];
         	if(pos!=-1){   	
-        	 if ((zj-cj)>cjzjpos){
+        	 if ((cj-zj)>cjzjpos){
         		 pos=j;
         		 cambiado=true;
         	 }
-        	}else if((zj-cj)>0){
+        	}else if((cj-zj)>0){
         	 pos=j;
-        	 cjzjpos=(zj-cj);
+        	 cjzjpos=(cj-zj);
         	 cambiado=true;
         	 }
         }
     	
         if(!cambiado) pos=-1;
         return pos;  // optimal
+    }
+    
+    // index of a non-basic column with most positive cost
+    private int entra2() {
+        int q = 0;
+        for (int j = 1; j < nRes + nVarObj; j++)
+            if (a[nRes][j]<0&&a[nRes][j] < a[nRes][q]) q = j;
+
+        if (a[nRes][q] >= 0) return -1;  // optimal
+        else return q;
     }
 
    // index of a non-basic column with most positive cost
@@ -311,33 +323,81 @@ public class SimplexV0 {
         double[] y = lp.dual();
         for (int j = 0; j < y.length; j++)
             System.out.println("y[" + j + "] = " + y[j]);
-        lp.pintaTablaPreSimplex();
+        lp.pintaTablaPreSimplex(lp.getTabla());
     }
 
     public static void test1() {
         double[][] A = {
-            {1,0,0,0,0,0},
-            {0,0,0,0,1,-1},
-            {1,0,0,0,1,0},
-            {2039,0,0,0,0,0},
-            {0,0,0,0,2039,0},
-            {0,0,0,0,0,2039},
-            {1,0,0,0,0,0},
-            {0,1,0,0,0,0},
-            {0,0,1,0,0,0},
-            {0,0,0,1,0,0},
-            {0,0,0,0,1,0},
-            {0,0,0,0,0,1}
+        		{1,0,0},
+        		{0,1,1},
+        		{1,1,0},
+        		{1,0,0},
+        		{0,1,0},
+        		{0,0,1},
         };
-        double[] c = {-1427.3,0,0,0,-1835.1,-1019.5};
-        double[] b = {1,0,1,15040,11273,13438,1,1,1,1,1,1};
+        double[] c = {-1427.3,-1835.1,-1019.5};
+        double[] b = {1,2,1,1,1,1};
         test(A, b, c);
     }
     
-    public void pintaTablaPreSimplex(){
+
+    
+    public static void test2() {
+        /*
+    	double[][] A = {
+        		{1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1},
+        		{0,0,0,0,1,-1,0,1,0,0,0,0,0,0,0,0,0,0,0,0},
+        		{1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1},
+        		{1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1},
+        		{2039,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,15040},
+        		{0,0,0,0,2039,0,0,0,0,0,0,1,0,0,0,0,0,0,0,11273},
+        		{0,0,0,0,0,2039,0,0,0,0,0,0,1,0,0,0,0,0,0,13438},
+        		{1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1},
+        		{0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1},
+        		{0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1},
+        		{0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1},
+        		{0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1},
+        		{0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1},
+        		//{1427.3,0,0,0,1835.1,1019.5,0,-EPSILON2,-EPSILON2,-EPSILON2,0,0,0,0,0,0,0,0,0,0}//orig max z=
+        		//{-1427.3,0,0,0,-1835.1,-1019.5,0,+EPSILON2,+EPSILON2,+EPSILON2,0,0,0,0,0,0,0,0,0,0}//max
+        		{-1427.3,0,0,0,-1835.1,-1019.5,0,-EPSILON2,-EPSILON2,-EPSILON2,0,0,0,0,0,0,0,0,0,0}
+        };
+        */
+    	double num1 = -1427.0E+0;
+       double num2 = -1835.0E+0;
+        double num3= -1019.0E+0;
+        double[][] A = {
+        		{1,0,0,1,0,0,0,0,0,1},
+        		{0,1,-1,0,1,0,0,0,0,0},
+        		{1,1,0,0,0,1,0,0,0,1},
+        		{1,0,0,0,0,0,1,0,0,1},
+        		{0,1,0,0,0,0,0,1,0,1},
+        		{0,0,1,0,0,0,0,0,1,1},
+        		//{1427.3,0,0,0,1835.1,1019.5,0,-EPSILON2,-EPSILON2,-EPSILON2,0,0,0,0,0,0,0,0,0,0}//orig max z=
+        		//{-1427.3,0,0,0,-1835.1,-1019.5,0,+EPSILON2,+EPSILON2,+EPSILON2,0,0,0,0,0,0,0,0,0,0}//max
+        		{num1,num2,num3,0,0,0,0,0,0,0}
+        }; 
+       
+        SimplexV0 lp = new SimplexV0(A, 6, 3);
+    	lp.pintaTablaPreSimplex(A);
+        System.out.println("value = " + lp.value());
+        double[] x = lp.primal();
+        for (int i = 0; i < x.length; i++)
+            System.out.println("x[" + i + "] = " + x[i]);
+        double[] y = lp.dual();
+        for (int j = 0; j < y.length; j++)
+            System.out.println("y[" + j + "] = " + y[j]);
+        lp.pintaTablaPreSimplex(lp.getTabla());
+    }
+    
+    public double[][] getTabla(){
+    	return this.a;
+    }
+    
+    public void pintaTablaPreSimplex(double[][] b){
 		int i=0;
 		int longitudNumeroActual=0;
-		for(i=0;i<a[0].length;i++){
+		for(i=0;i<b[0].length;i++){
 			if(i<this.nVarObj) System.out.print("x"); else System.out.print("y");
 			System.out.print(i);
 			longitudNumeroActual=logitudNumero(i);
@@ -350,22 +410,22 @@ public class SimplexV0 {
 		}
 		System.out.println();
 		DecimalFormat df = new DecimalFormat("#0.0#");
-		for(i=0;i<a.length;i++){
-			for(int j=0;j<a[0].length;j++){
-				if(a[i][j]!=EPSILON){
-					longitudNumeroActual=logitudNumero(a[i][j]);
-					System.out.print(df.format(a[i][j]));
+		for(i=0;i<b.length;i++){
+			for(int j=0;j<b[0].length;j++){
+				if(b[i][j]!=EPSILON2){
+					longitudNumeroActual=logitudNumero(b[i][j]);
+					System.out.print(df.format(b[i][j]));
 					}else{
 						System.out.print("-M");
 						longitudNumeroActual=-1;
 				}
-				if(a[i][j]<0) longitudNumeroActual++;
-				if(longitudNumeroActual<5&&j<(a[0].length-2)){
+				if(b[i][j]<0) longitudNumeroActual++;
+				if(longitudNumeroActual<5&&j<(b[0].length-2)){
 					for(int t=longitudNumeroActual;t<5;t++){
 						System.out.print(" ");						
 					}
 					
-				}else if(longitudNumeroActual<5&&j<(a[0].length-1)){
+				}else if(longitudNumeroActual<5&&j<(b[0].length-1)){
 					for(int t=longitudNumeroActual;t<5;t++){
 						System.out.print(" ");						
 					}
