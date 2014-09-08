@@ -196,9 +196,9 @@ public class PreparaLineal {
 					preTabla[i][preTabla[0].length-2]=MENORIGUAL;
 					}
 		}//Fin for camino
-		//if(debug) pintaTablaPreSimplexSimbolo();
+		if(debug) pintaTablaPreSimplexSimbolo();
 		acondicionaTabla();
-		//if(debug) pintaTablaPreSimplexFinal();
+		if(debug) pintaTablaPreSimplexFinal();
 	}
 	
 	public int getNumRestricciones(){

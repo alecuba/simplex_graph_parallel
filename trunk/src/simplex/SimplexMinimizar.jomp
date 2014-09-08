@@ -204,12 +204,12 @@ public class SimplexMinimizar {
         		{0,1,0,0,0,0,0,0,0,0,0,1,0,1},        		
         		{0,0,1,0,0,0,0,0,0,0,0,0,1,1},
         		{num1,num2,num3,0,0,0,M,0,0,M,0,0,0,0}
-        }; 
+        };
        
         long elapsedTimeMillis=0;
         SimplexMinimizar lp = new SimplexMinimizar();
         lp.ponTabla(A, 8, 3);
-        lp.setFlags(false, true);
+        lp.setFlags(true, true);
         long start;
         for(int i=0;i<10;i++){
         start = System.nanoTime();
