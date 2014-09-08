@@ -53,6 +53,7 @@ public class Principal {
 	private JButton btnGenerarClientes;
 	private JButton btnGrafoyCliente;
 	private JButton btnEncuentraCaminos;
+	private JButton btnEncuentraCaminosx10;
 	private JCheckBoxMenuItem chckbxmntmCargaCopia;
 	private JCheckBoxMenuItem chckbxmntmBDTest1;
 	private JCheckBoxMenuItem chckbxmntmBDTest2;
@@ -227,6 +228,7 @@ public class Principal {
 					Principal.this.chckbxmntmBDTest100.setSelected(false);
 					Principal.this.chckbxmntmBDTest200.setSelected(false);
 					Principal.this.chckbxmntmBDTest400.setSelected(false);
+					Principal.this.chckbxmntmBDTest2.setSelected(false);					
 					Principal.this.tablaNum=1;
 					Principal.this.gestor.setPrecargaTabla(tablaNum);
 				}
@@ -391,6 +393,20 @@ public class Principal {
 		chckbxmntmDebug.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				Principal.this.gestor.setDebug(((AbstractButton) e.getSource())
+						.getModel().isSelected());
+			}
+		});
+		
+		JCheckBoxMenuItem chckbxmntmParalelo = new JCheckBoxMenuItem("Paralelo");
+		if(gestor.getParalelo()){
+			chckbxmntmParalelo.setSelected(true);
+			}else{
+				chckbxmntmParalelo.setSelected(false);
+			}
+		mnOpciones.add(chckbxmntmParalelo);
+		chckbxmntmParalelo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Principal.this.gestor.setParalelo(((AbstractButton) e.getSource())
 						.getModel().isSelected());
 			}
 		});
@@ -656,6 +672,21 @@ public class Principal {
 				//Thread queryThread = new Thread() {
 				 //     public void run() {
 				Principal.this.gestor.encuentraCaminos(Integer.parseInt(txtMinsecciones.getText()), Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2,Integer.parseInt(txtMinclientes.getText()), Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));;						
+				gestionBotones(true);
+				//      }
+				 //   };
+				  //  queryThread.start();	
+			}
+		});
+		
+		btnEncuentraCaminosx10 = new JButton("Encuentra Caminos Benchmark x10");
+		verticalBox_2.add(btnEncuentraCaminosx10);
+		btnEncuentraCaminosx10.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				gestionBotones(false);
+				//Thread queryThread = new Thread() {
+				 //     public void run() {
+				Principal.this.gestor.encuentraCaminosx10(Integer.parseInt(txtMinsecciones.getText()), Integer.parseInt(txtMaxsecciones.getText()),Integer.parseInt(txtMincruces.getText()),Integer.parseInt(txtMaxcruces.getText()),1,2,Integer.parseInt(txtMinclientes.getText()), Integer.parseInt(txtMaxclientes.getText()),Integer.parseInt(txtMinconsumo.getText()),Integer.parseInt(txtMaxconsumo.getText()));;						
 				gestionBotones(true);
 				//      }
 				 //   };

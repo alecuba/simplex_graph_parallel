@@ -12,14 +12,6 @@ import comun.Gestor;
 
 public class Secciones {
 
- public class Seccion {
-
-			public int idSeccion;
-			public float coste;
-			public int maximo;
-			public int vertA;
-			public int vertB;}
-  
   public ArrayList secciones= new ArrayList();
   
   public int[] agregaSeccion(int idSeccion,float coste, int maximo, int vertA, int vertB){
@@ -143,6 +135,10 @@ public class Secciones {
   public float getCosteSeccion(int id){
 	  Seccion seccion = ((Seccion)secciones.get(id));
 	  return seccion.coste;
+  }
+  
+  public void limpia(){
+	 secciones= new ArrayList();
   }}
 
 

@@ -3,37 +3,10 @@ package busqueda;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import busqueda.Caminos.Camino;
-import busqueda.Caminos.IdSeccion;
+import busqueda.Camino;
+import busqueda.Secciones;
 
 public class Caminos {
-
-
-
-		
-	public class Camino {
-
-
-		public int idcliente;
-		public long idcamino;
-		public ArrayList idsecciones = new ArrayList();
-		public int finalizadoOvisitando=0;}
-
-	
-	public class IdSeccion {
-
-		public int idseccion;
-		public int sentido;
-		public IdSeccion(){
-			
-		}
-		public IdSeccion(int idseccion,int sentido){
-			this.idseccion=idseccion;
-			this.sentido=sentido;
-		}}
-
-
-	
 	public Secciones secciones;
 	public ArrayList listaCaminos = new ArrayList();
 	private long id=0;
@@ -104,7 +77,13 @@ public class Caminos {
 	
 	public void borraCamino(Camino posUltimoCamino){
 		listaCaminos.remove(posUltimoCamino);
-		listaCaminos.trimToSize();
+		//listaCaminos.trimToSize();
+	}
+	
+	public void limpia(Secciones secciones){
+		secciones.limpia();
+		listaCaminos = new ArrayList();
+		id=0;
 	}
 
 	public Camino getUltimoCaminoNoFinalizadoNiVisitando(){
@@ -128,8 +107,9 @@ public class Caminos {
 						//{
 							encontradoUno=true;
 							 caminoFinal=caminoActual;
+							 caminoActual.finalizadoOvisitando=1;
 						//}
-					((Camino)listaCaminos.get(micopiai)).finalizadoOvisitando=1;
+					
 				}else if(micopiai>0){
 					Camino caminoMenos1 = ((Camino)listaCaminos.get(micopiai-1));
 					if(caminoMenos1!=null&&caminoActual.idcliente!=caminoMenos1.idcliente){
@@ -142,6 +122,7 @@ public class Caminos {
 				//}
 			}
 	   if(!encontradoUno) caminoFinal=null;
+	   //System.out.println("Thread num:"+jomp.runtime.OMP.getThreadNum()+" idcamino:"+caminoFinal.idcamino);
 	   //System.out.println("Sale getUltimoCaminoNoFinalizadoNiVisitando");
 	   return caminoFinal;
 	}
