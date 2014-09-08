@@ -8,13 +8,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.RejectedExecutionException;
-
-import simplex.SimplexV0;
+import simplex.SimplexMinimizar;
 import linealizacion.PreparaLineal;
 import busqueda.Caminos;
 import busqueda.RecorreGrafo;
 import busqueda.Secciones;
-
 import com.codahale.metrics.Gauge;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Cluster;
@@ -37,15 +35,22 @@ public class Gestor{
 		private boolean autoinserta = false;
 		private int usaTablaPrecargada = 1;
 		private int tablaNum = 2;
-		private int maxSimultaneousRequest;
-		private int maxConnectionsPerHost;
+		private boolean paralelo=true;
 		
 		public void setDebug(boolean debug) {
 			this.debug = debug;
 		}
 		
+		public void setParalelo(boolean paralelo) {
+			this.paralelo = paralelo;
+		}
+		
 		public boolean getDebug(){
 			return debug;
+		}
+		
+		public boolean getParalelo(){
+			return paralelo;
 		}
 		
 		public void setPrecargaTabla(int precarga,int num){
@@ -54,7 +59,16 @@ public class Gestor{
 		}
 		
 		public void setPrecargaTabla(int num){
+			
 			this.tablaNum=num;
+			 switch(num){
+	           case 1: preCargaTabla2();System.out.println("Utilizando tabla test1");break;
+	           case 2: preCargaTabla3();System.out.println("Utilizando tabla test2");break;
+	           case 50: copiaTabla("50",true);System.out.println("Utilizando tabla test50");break;
+	           case 100:copiaTabla("100",true);System.out.println("Utilizando tabla test100");break;
+	           case 200:copiaTabla("200",true);System.out.println("Utilizando tabla test200");break;
+	           case 400:copiaTabla("400",true);System.out.println("Utilizando tabla test400");break;
+	           }
 		}
 		
 		public int[] getPrecargaTabla(){
@@ -69,12 +83,12 @@ public class Gestor{
 		
 		private void preCargaTabla(){
            switch(tablaNum){
-           case 1: preCargaTabla2();System.out.println("Utilizando tabla test1");break;
-           case 2: preCargaTabla3();System.out.println("Utilizando tabla test2");break;
-           case 50: copiaTabla("50",true);System.out.println("Utilizando tabla test50");break;
-           case 100:copiaTabla("100",true);System.out.println("Utilizando tabla test100");break;
-           case 200:copiaTabla("200",true);System.out.println("Utilizando tabla test200");break;
-           case 400:copiaTabla("400",true);System.out.println("Utilizando tabla test400");break;
+           case 1: preCargaTabla2();System.out.println("Precargando tabla test1");break;
+           case 2: preCargaTabla3();System.out.println("Precargando tabla test2");break;
+           case 50: copiaTabla("50",true);System.out.println("Precargando tabla test50");break;
+           case 100:copiaTabla("100",true);System.out.println("Precargando tabla test100");break;
+           case 200:copiaTabla("200",true);System.out.println("Precargando tabla test200");break;
+           case 400:copiaTabla("400",true);System.out.println("Precargando tabla test400");break;
            }
 		}
 		
@@ -145,19 +159,77 @@ public class Gestor{
 						Secciones secciones=new Secciones();
 						Caminos caminos = new Caminos(secciones);
 						RecorreGrafo recorre = new RecorreGrafo(this,caminos);
-						recorre.setDebug(true);
-						long tiempo=recorre.encuentraCaminosTodosClientes();
+						recorre.setFlags(debug,paralelo);
+						long tiempoNs=recorre.encuentraCaminosTodosClientes();
+						long tiempoMs=tiempoNs/1000000;
+						long tiempoS=tiempoMs/1000;
 						caminos.pintaCaminosGenerados();
-						System.out.println("\nNumero Threads utilizados:"+jomp.runtime.OMP.getMaxThreads()+" tiempo("+(tiempo/1000F)+")");
+						//caminos.pintaCaminosGenerados();
+						System.out.println("\ntiempo ("+(tiempoNs)+"Ns ,"+tiempoMs+"Ms ,"+tiempoS+" S)");
+						
 						if(!secciones.rellenaCaracteristicas(this)){
 							//Linealizar
 							PreparaLineal lineal = new PreparaLineal(this,debug);
+							lineal.setFlags(debug,paralelo);
 							lineal.creaTablaPreSimplex(caminos,secciones);
-							SimplexV0 simplex = new SimplexV0(lineal.getTabla(),lineal.getNumRestricciones(),lineal.getNumVarsObjetivo());
+							SimplexMinimizar simplex = new SimplexMinimizar();
+							simplex.ponTabla(lineal.getTabla(),lineal.getNumRestricciones()-1,lineal.getNumVarsObjetivo()-1);
+							System.out.println("-----------Resultado simplex-----");
 							simplex.imprime();
-							simplex.pintaTablaPreSimplex(simplex.getTabla());
+							//simplex.pintaTabla(simplex.getTabla());
 							//simplex
 						}
+						
+						}else{
+							if(!generado) System.out.println("No se pudo encontrar caminos porque no se genero");
+						}
+		}
+		
+		public void encuentraCaminosx10(int minSecciones, int maxSecciones, int minCruces,int maxCruces,int minEntradas,int maxEntradas,int minClientes, int maxClientes, int minConsumo,int maxConsumo){
+			boolean generado=true;
+			if (usaTablaPrecargada==1){
+				this.preCargaTabla();
+			}
+			if((grafo==null) && checkGrafoVacioBD()) generado=generarSecciones( minSecciones,  maxSecciones,  minCruces, maxCruces, minEntradas, maxEntradas);
+			if((clientes==null)&&checkClienteVacioBD()) generado=generaClientes(minClientes,  maxClientes,  minConsumo, maxConsumo);
+			if(generado){
+						//Secciones secciones=new Secciones();
+						//Caminos caminos = new Caminos(secciones);
+						//RecorreGrafo recorre = new RecorreGrafo(this,caminos);
+						//recorre.setFlags(debug,paralelo);
+						Secciones secciones;
+						Caminos caminos = null;
+						RecorreGrafo recorre;
+						long tiempoNs=0;
+						long tiempoMs=0;
+						long tiempoS=0;
+						for(int i=0;i<10;i++){
+							secciones=new Secciones();
+							caminos = new Caminos(secciones);
+							recorre = new RecorreGrafo(this,caminos);
+							recorre.setFlags(debug,paralelo);
+							caminos.limpia(secciones);
+							tiempoNs=tiempoNs+recorre.encuentraCaminosTodosClientes();
+						}
+						long diez=10;
+						tiempoNs=tiempoNs/diez;
+						tiempoMs=tiempoNs/1000000;
+						tiempoS=tiempoMs/1000;
+						//caminos.pintaCaminosGenerados();
+						System.out.println("\ntiempo ("+(tiempoNs)+"Ns ,"+tiempoMs+"Ms ,"+tiempoS+" S)");
+						/*
+						if(!secciones.rellenaCaracteristicas(this)){
+							//Linealizar
+							PreparaLineal lineal = new PreparaLineal(this,debug);
+							lineal.setFlags(debug,paralelo);
+							lineal.creaTablaPreSimplex(caminos,secciones);
+							SimplexMinimizar simplex = new SimplexMinimizar(lineal.getTabla(),lineal.getNumRestricciones()-1,lineal.getNumVarsObjetivo()-1);
+							System.out.println("-----------Resultado simplex-----");
+							simplex.imprime();
+							//simplex.pintaTabla(simplex.getTabla());
+							//simplex
+						}
+						*/
 						}else{
 							if(!generado) System.out.println("No se pudo encontrar caminos porque no se genero");
 						}
@@ -621,7 +693,6 @@ public class Gestor{
 					try {
 						cluster = Cluster.builder().addContactPoint("127.0.0.1").withProtocolVersion(2).build();
 						Metadata metadata = cluster.getMetadata();
-						this.maxSimultaneousRequest=cluster.getConfiguration().getPoolingOptions().getMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL);
 						if (debug)
 							System.out.printf("Conectado al cluster: %s\n",
 									metadata.getClusterName());
