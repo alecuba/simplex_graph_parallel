@@ -1,6 +1,7 @@
 package simplex;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 
 import com.datastax.driver.core.Row;
 
@@ -26,16 +27,17 @@ public class SimplexMinimizar {
         this.nRes = nRes;
         this.nVarObj = nVarObj;
         this.a=tabla; 
+        bj = new int[nRes];
     }
     
-    public void calcula(){
+    public boolean calcula(){
     	//Hacemos la base
-    	 construyeBj();
-         resolver();
+    	construyeBj();
+    	 if(bj==null)System.out.println("error construir BJ"); else resolver();
+    	 return inf;
     }
     
     private void construyeBj(){
-    	bj = new int[nRes];
     	boolean asignado[]= new boolean[nRes];
     	int identidad[]=new int[]{-1,-1};
     	//if(debug) System.out.println(a[0].length);
@@ -47,6 +49,8 @@ public class SimplexMinimizar {
         	}
         }
     }
+    
+    private long tiempoAnterior=0;
 
     private int[] esIdentidad(int columna){
     	boolean encontrado1=false;
@@ -76,19 +80,19 @@ public class SimplexMinimizar {
         //if(debug) System.out.println("Identidad columna("+columna+"):"+identidad[0]+" su fila("+identidad[1]+")");
         return identidad;
     }
-
+    private int iteracion=0;
+    private boolean inf=false;
     private void resolver() {
-    	int iteracion=0;
         while (true) {
-        	if(debugIteracion) System.out.println("Iteracion "+iteracion);
+        	if(System.currentTimeMillis()-tiempoAnterior>2000){ tiempoAnterior=System.currentTimeMillis();System.out.println("Simplex Iteracion "+iteracion);}
         	if(debug) pintaTabla(this.a);
         	
             int columnaEntrante = entra();
-            if (columnaEntrante == -1) {if(debug) System.out.println("------------------------Optimo---------------------");break;}  // optimal}
+            if (columnaEntrante == -1) {System.out.println("------------------------Optimo encontrado---------------------");break;}  // optimal}
 
 
             int filaSaliente = sale(columnaEntrante);
-            if (filaSaliente == -1) throw new ArithmeticException("Infinitas soluciones, no esta acotado");
+            if (filaSaliente == -1) {System.out.println("------------------------Infinitas soluciones---------------------");inf=true;break;}
 
             // recalculamos con el pivote
             recalculaFilasConPivote(filaSaliente, columnaEntrante);
@@ -278,13 +282,21 @@ public class SimplexMinimizar {
     }
 
     public void imprime(){
-    	System.out.println("Z vale:"+this.getZ());
+    	System.out.println("Zmin:"+this.getZ());
     }
     
     public void setFlags(boolean debug,boolean paralelo) {
 		this.debug = debug;
 		this.paralelo=paralelo;
 	}
+    
+    public int[] getResultado(){
+    	int[] resultado=new int[nVarObj];
+    	for(int i=0;i<bj.length;i++){
+    		if(bj[i]<nVarObj&&a[i][a[0].length-1]==1) resultado[bj[i]]=1;
+    	}
+    	return resultado;
+    }
     
     public static void test2() {
     	double num1 = 1427.0E+0;

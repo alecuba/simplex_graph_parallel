@@ -24,6 +24,7 @@ public class PreparaLineal {
 	  private static final double MAYORIGUAL=6;
 
 		private double[][] preTabla;
+
 		private int numeroSecciones;
 		private Gestor gestor;
 		private int numeroClientes;
@@ -131,7 +132,7 @@ public class PreparaLineal {
 		numeroCaminos=caminos.listaCaminos.size();
 		numeroRestricciones=numeroCaminos*2+numeroClientes*2+numeroSecciones*2;//una restriccion por camino + una restriccion de un camino por cliente + restriccion de consumo cada camino + funcion objetivo
 		numeroVarsObjetivo=numeroCaminos*numeroSecciones;//Numero de caminos * numero de secciones = total variables
-		System.out.println("NumeroClientes:"+numeroClientes+" NumeroCaminos:"+numeroCaminos+" bloque:"+numeroSecciones);
+		//System.out.println("NumeroClientes:"+numeroClientes+" NumeroCaminos:"+numeroCaminos+" bloque:"+numeroSecciones);
 		preTabla = new double[numeroCaminos+numeroClientes+(numeroSecciones*2)+1][numeroVarsObjetivo+2];
 		//preTabla = new float[numeroCaminos+numeroClientes+numeroSecciones+1][numeroCaminos*numeroSecciones+2];
 		boolean agregadoRest1camino;
@@ -195,9 +196,9 @@ public class PreparaLineal {
 					preTabla[i][preTabla[0].length-2]=MENORIGUAL;
 					}
 		}//Fin for camino
-		if(debug) pintaTablaPreSimplexSimbolo();
+		//if(debug) pintaTablaPreSimplexSimbolo();
 		acondicionaTabla();
-		if(debug) pintaTablaPreSimplexFinal();
+		//if(debug) pintaTablaPreSimplexFinal();
 	}
 	
 	public int getNumRestricciones(){
@@ -399,7 +400,24 @@ public class PreparaLineal {
 			System.out.print("\n");
 		}
 	}
-
+	
+	public void formateaResultadoSimplex(int[] seccionesSimplex,Caminos caminos){
+		System.out.println("Caminos a utilizar:");
+		int camino=0;
+		for(int bloque=0;bloque<seccionesSimplex.length;bloque+=numeroSecciones){
+			Camino micamino=caminos.getCamino(camino);
+			int secciones=0;
+			boolean noSeUsa=false;
+			while(secciones<micamino.idsecciones.size() && !noSeUsa){
+				if(seccionesSimplex[bloque+((IdSeccion)micamino.idsecciones.get(secciones)).idseccion]!=1){
+					  noSeUsa=true;
+					}else{secciones++;}
+			}
+			if(!noSeUsa){System.out.println("Cliente("+micamino.idcliente+") Camino("+micamino.idcamino+")");}
+			camino++;	
+			}
+	}
+	
 	 public void setFlags(boolean debug,boolean paralelo) {
 			this.debug = debug;
 			this.paralelo=paralelo;
