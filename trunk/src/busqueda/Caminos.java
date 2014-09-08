@@ -10,7 +10,7 @@ public class Caminos {
 
 	public Secciones secciones;
 	public ArrayList listaCaminos = new ArrayList();
-	private long id=0;
+	private int id=0;
 	
 	public Caminos(Secciones secciones){
 		this.secciones=secciones;
@@ -38,7 +38,19 @@ public class Caminos {
 		}
 		System.out.println("Numero Caminos total:"+numCaminos);
 	}
-			
+	
+	public int getIdClienteCaminoN(int pos){
+		return ((Camino)listaCaminos.get(pos)).idcliente;
+	}
+	
+	public int getIdCaminoN(int pos){
+		return ((Camino)listaCaminos.get(pos)).idcamino;
+	}
+	
+	public Camino getCamino(int pos){
+	 return 	(Camino)listaCaminos.get(pos);
+	}
+	
 	public void agregaNuevoCamino(Camino caminoAcopiarSecciones,int idSeccion,int vertB){
 		Camino caminoTemp = new Camino();
 		caminoTemp.idcamino=id;	

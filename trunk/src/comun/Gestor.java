@@ -34,7 +34,7 @@ public class Gestor{
 		private boolean debug = true;
 		private boolean autoinserta = false;
 		private int usaTablaPrecargada = 1;
-		private int tablaNum = 2;
+		private int tablaNum = 1;
 		private boolean paralelo=true;
 		
 		public void setDebug(boolean debug) {
@@ -173,9 +173,13 @@ public class Gestor{
 							lineal.setFlags(debug,paralelo);
 							lineal.creaTablaPreSimplex(caminos,secciones);
 							SimplexMinimizar simplex = new SimplexMinimizar();
+							simplex.setFlags(false, true);
 							simplex.ponTabla(lineal.getTabla(),lineal.getNumRestricciones()-1,lineal.getNumVarsObjetivo()-1);
+							if(!simplex.calcula()){
 							System.out.println("-----------Resultado simplex-----");
 							simplex.imprime();
+							lineal.formateaResultadoSimplex(simplex.getResultado(),caminos);
+							}
 							//simplex.pintaTabla(simplex.getTabla());
 							//simplex
 						}
