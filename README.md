@@ -14,15 +14,15 @@ Few images..
 Initial problem graph.
 ![Problem graph](energy_graph.jpg?raw=true "Problem graph")
 
-JOMP parallel library stack
+JOMP parallel library stack.
 ![JOMP java stack](jomp_stack.jpg?raw=true "JOMP java stack")
 
-General overview code running
+General overview code running.
 ![Code_running](code_running.png?raw=true "Code_running")
 
-Intermediate simplex table result
+Intermediate simplex table result.
 ![simplex_iteration](simplex_iteration.png?raw=true "simplex_iteration")
 
-Parallel speedup
+Parallel speedup.
 ![Parallel speedup](speedup.png?raw=true "Parallel speedup")
 
