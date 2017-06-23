@@ -10,4 +10,7 @@ The simplex algorithm is boosted by using OpenMP and MPI bindings for java.
 The BD is a nosql distributed in order to get more performance.
 
 Few images..
+
 ![code_running](./simplex_graph_parallel/raw/master/code_running.png)
+
+![Code_running](code_running.png?raw=true "Code_running")
